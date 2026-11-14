@@ -262,3 +262,32 @@ input,textarea,[contenteditable="true"]{cursor:url(fish-cursor.png) 1 1,text !im
 .npc-modal .npc-x{position:sticky;top:0;float:right;z-index:2}
 .npc-modal .npc-box{padding:0 0 8px}.npc-modal h2{margin:0 0 6px}
 @media (max-width:600px){.npc-modal .npc-box{flex-direction:column;align-items:stretch}.npc-modal .npc-big{min-height:160px}}
+/* 히어로 너비 넉넉하게(2026-11-14 보정) */
+.hero{grid-template-columns:minmax(220px,300px) minmax(0,1fr) minmax(320px,440px);gap:24px;padding:22px 26px}
+.hero-pic{min-height:220px}
+.hero-main h1{font-size:28px}
+.hero-facts{font-size:15px;gap:6px 16px}
+.hero-side{align-items:stretch;gap:14px;padding:18px 20px;min-width:0}
+.hs-top{display:flex;align-items:center;gap:16px}
+.hs-top .big-tier{min-width:88px;height:88px;font-size:40px;border-radius:20px}
+.hs-top .hero-score{align-items:flex-start;gap:2px}
+.hs-top .hero-score b{font-size:30px;line-height:1.1}
+.hs-top .hero-score span,.hs-top .hero-mini{font-size:13px;text-align:left}
+.hs-bars{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.hs-cap{font-size:12px;color:var(--muted);margin-bottom:4px}
+.hero-side .ebars{width:auto}
+.ebar,.sbar{font-size:13px}
+.sbars{display:flex;flex-direction:column;gap:4px}
+.sbar{display:grid;grid-template-columns:32px 1fr 46px;gap:6px;align-items:center}
+.sbar i{height:8px;border-radius:4px;background:var(--panel2);overflow:hidden;display:block}.sbar i b{display:block;height:100%;background:var(--acc);border-radius:4px}
+.sbar em{font-style:normal;text-align:right;color:var(--text);font-variant-numeric:tabular-nums}
+.ebar{grid-template-columns:18px 1fr 22px}.ebar i{height:8px}
+.hero-side:not(:has(.hs-bars)){justify-content:center}
+@media (max-width:1180px){.hero{grid-template-columns:minmax(200px,260px) minmax(0,1fr)}.hero-side{grid-column:1 / -1}.hs-bars{grid-template-columns:1fr 1fr}.hero-side{flex-direction:row;flex-wrap:wrap;align-items:center}.hero-side .hs-bars{flex:1 1 360px}}
+@media (max-width:860px){.hero{grid-template-columns:1fr}.hero-side{flex-direction:column;align-items:stretch}.hs-bars{grid-template-columns:1fr}}
+/* 넓은 화면: 퀘스트 단계는 글(왼쪽) + 장면(오른쪽) */
+@media (min-width:1300px){.step-grid{display:grid;grid-template-columns:minmax(320px,1fr) auto;grid-template-areas:'t f' 'r f';grid-template-rows:auto 1fr;align-items:start;gap:10px 18px}.step-grid>.st-text{grid-area:t}.step-grid>.figs{grid-area:f;justify-content:flex-end}.step-grid>.st-route{grid-area:r;min-width:0}}
+.col-stack{display:flex;flex-direction:column;gap:14px;min-width:0}.col-stack>.panel{margin:0}.col-stack .av{margin:0}
+.col-stack .av-main{flex-direction:column}.col-stack .av-stage,.col-stack .av-ctl{flex:1 1 auto}
+.route-grid{display:flex;flex-wrap:wrap;gap:6px 22px;align-items:flex-start}.route-grid>div{min-width:0}
+.hunt-bottom{grid-template-columns:repeat(auto-fit,minmax(300px,1fr));align-items:start;margin-top:14px}.hunt-bottom .panel{margin:0}

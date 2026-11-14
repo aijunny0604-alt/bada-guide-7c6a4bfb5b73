@@ -199,3 +199,66 @@ input,textarea,[contenteditable="true"]{cursor:url(fish-cursor.png) 1 1,text !im
 .av-pad{display:grid;grid-template-columns:repeat(3,48px);grid-template-rows:repeat(3,48px);gap:4px}.av-pad button{min-width:0;padding:0;font-size:20px}
 .av-btns{display:flex;flex-direction:column;gap:6px}.av-btns>div{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
 .av select{min-height:36px}.seg{display:inline-flex;gap:0}.seg button{border-radius:0}.seg button:first-child{border-radius:8px 0 0 8px}.seg button:last-child{border-radius:0 8px 8px 0}
+/* ---- 상세 페이지 히어로 */
+.hero{position:relative;overflow:hidden;display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:20px;align-items:center;padding:20px 22px;margin:4px 0 16px;border:1px solid var(--line);border-radius:16px;background:var(--panel);box-shadow:var(--shadow);--hc:var(--acc)}
+.hero::before{content:"";position:absolute;inset:0;background:linear-gradient(115deg,color-mix(in srgb,var(--hc) 22%,transparent) 0%,color-mix(in srgb,var(--hc) 8%,transparent) 45%,transparent 75%);pointer-events:none}
+.hero>*{position:relative}
+.hero .hero-bg{position:absolute;inset:0;overflow:hidden;pointer-events:none;opacity:.22;-webkit-mask-image:linear-gradient(90deg,transparent 0%,#000 35%,#000 100%);mask-image:linear-gradient(90deg,transparent 0%,#000 35%,#000 100%)}
+.hero .hero-bg>div{position:absolute;right:-40px;top:50%;transform:translateY(-50%) scale(.9);transform-origin:right center;filter:blur(3px) saturate(1.1)}
+.hero.el-fire{--hc:var(--fire)} .hero.el-water{--hc:var(--water)} .hero.el-earth{--hc:var(--earth)} .hero.el-wind{--hc:var(--wind)}
+.hero.el-hunt{--hc:var(--good)} .hero.el-quest{--hc:var(--warn)} .hero.el-town{--hc:var(--acc)} .hero.el-set{--hc:#9b5de5}
+.hero.el-rare0{--hc:#667085}.hero.el-rare1{--hc:#2b8a3e}.hero.el-rare2{--hc:#1971c2}.hero.el-rare3{--hc:#7048e8}.hero.el-rare4{--hc:#e8590c}.hero.el-rare5{--hc:#c92a2a}
+.hero-pic{min-width:170px;min-height:170px;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:4px;padding:10px;border-radius:14px;background:color-mix(in srgb,var(--panel) 70%,transparent);border:1px solid color-mix(in srgb,var(--hc) 30%,var(--line))}
+.hero-pic img.gif,.hero-pic .spr{image-rendering:pixelated}
+.hero-main{min-width:0}
+.hero-main h1{font-size:26px;line-height:1.25;margin:0 0 6px}.hero-main h1 .id{font-size:16px;vertical-align:middle}
+.hero-tags{margin-bottom:8px}
+.hero-facts{display:grid;grid-template-columns:auto minmax(0,1fr);gap:4px 14px;margin:6px 0 10px;font-size:14px}
+.hero-facts dt{color:var(--muted);white-space:nowrap}.hero-facts dd{margin:0;min-width:0}
+.hero-cmds{display:flex;flex-wrap:wrap;gap:6px}
+.hero-side{display:flex;flex-direction:column;align-items:center;gap:6px;min-width:150px;padding:12px;border-radius:14px;background:color-mix(in srgb,var(--panel) 75%,transparent);border:1px solid var(--line)}
+.big-tier{min-width:76px;height:76px;padding:0 10px;border-radius:18px;display:flex;align-items:center;justify-content:center;color:#fff;font:800 34px/1 Consolas,"Malgun Gothic",monospace;box-shadow:0 4px 14px rgba(0,0,0,.18)}
+.hero-score{display:flex;flex-direction:column;align-items:center;line-height:1.2}.hero-score b{font-size:22px}.hero-score span,.hero-mini{color:var(--muted);font-size:12px;text-align:center}
+.hero-ride{display:inline-flex;align-items:center;gap:6px}.hero-ride img{image-rendering:pixelated}
+.ebars{display:flex;flex-direction:column;gap:3px;width:130px}
+.ebar{display:grid;grid-template-columns:16px 1fr 18px;gap:5px;align-items:center;font-size:12px}
+.ebar i{height:7px;border-radius:4px;background:var(--panel2);overflow:hidden;display:block}.ebar i b{display:block;height:100%;border-radius:4px}
+.ebar em{font-style:normal;color:var(--muted);text-align:right}
+.e-earth b{background:var(--earth)}.e-water b{background:var(--water)}.e-fire b{background:var(--fire)}.e-wind b{background:var(--wind)}
+.e-earth span{color:var(--earth)}.e-water span{color:var(--water)}.e-fire span{color:var(--fire)}.e-wind span{color:var(--wind)}
+@media (max-width:860px){
+  .hero{grid-template-columns:1fr;gap:12px;padding:16px}
+  .hero-pic{min-height:150px}
+  .hero-side{flex-direction:row;flex-wrap:wrap;justify-content:center}
+  .hero .hero-bg{-webkit-mask-image:linear-gradient(180deg,transparent 0%,#000 40%);mask-image:linear-gradient(180deg,transparent 0%,#000 40%)}
+  .hero-main h1{font-size:22px}
+}
+/* ---- 능력치 표 */
+.stat-t tr.hl td{background:var(--acc2);font-weight:600}.stat-t tr.dim td{color:var(--muted)}
+.roll-more{margin:6px 0}.roll-more summary{cursor:pointer;color:var(--acc);font-size:14px}
+/* ---- NPC 그림 */
+.npc-pic{display:inline-flex;align-items:flex-end;justify-content:center;padding:4px;border:1px solid var(--line);border-radius:10px;background:var(--panel2);cursor:zoom-in;vertical-align:middle}
+.npc-pic:hover{border-color:var(--acc)}.npc-pic img{image-rendering:pixelated}
+.npc-cell{display:flex;gap:10px;align-items:center}
+.step-npc{display:flex;gap:12px;align-items:center;margin-bottom:6px}
+.npc-box{display:flex;gap:20px;flex-wrap:wrap;align-items:center;padding:8px}.npc-big{min-width:200px;min-height:200px;display:flex;align-items:flex-end;justify-content:center;background:var(--panel2);border-radius:14px;padding:10px}
+.npc-big img{image-rendering:pixelated}
+/* ---- 탑승 카드·상세 */
+.ride-card{display:flex;flex-direction:column;gap:4px}
+.ride-card .pic{position:relative;height:132px;display:flex;align-items:flex-end;justify-content:center;background:var(--panel2);border-radius:8px}
+.ride-card .pic img{image-rendering:pixelated}
+.ride-card .ride-pet{position:absolute;left:6px;top:6px;opacity:.9}
+.ride-card .nm{font-weight:600}
+.ride-grid.pick .ride-cell{cursor:pointer;font:inherit;color:var(--text);border:2px solid var(--line);background:var(--panel)}
+.ride-grid.pick .ride-cell.on{border-color:var(--acc);background:var(--acc2)}
+.ride-grid.pick .ride-cell:disabled{cursor:default}
+.ride-grid.pick .ride-cell em{font-style:normal;color:var(--warn)}
+/* ---- 마을 카드 */
+.town-cards{grid-template-columns:repeat(auto-fill,minmax(250px,1fr))}
+.town-card{display:flex;flex-direction:column;gap:6px}
+.town-card .town-pic{height:120px;overflow:hidden;border-radius:8px;display:flex;justify-content:center;background:var(--panel2)}
+.town-card .town-pic .fig{margin:0;pointer-events:none}
+.bad{color:var(--bad)}.warn{color:var(--warn)}
+.npc-modal .npc-x{position:sticky;top:0;float:right;z-index:2}
+.npc-modal .npc-box{padding:0 0 8px}.npc-modal h2{margin:0 0 6px}
+@media (max-width:600px){.npc-modal .npc-box{flex-direction:column;align-items:stretch}.npc-modal .npc-big{min-height:160px}}

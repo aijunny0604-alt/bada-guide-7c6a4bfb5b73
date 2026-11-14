@@ -65,6 +65,61 @@
     return p ? petImg(p.img, box, big ? 2 : 1) : '';
   }
 
+  // ---------------------------------------------------------------- 상단 히어로(상세 페이지 머리)
+  var RBS = M.ride_bases || ['', ''];
+  function RB(id) { return RBS[(+String(id).replace(/^r/, '')) % 2] || ''; }
+  var EL_KO = { '지': 'earth', '수': 'water', '화': 'fire', '풍': 'wind' };
+  function domEl(el) { var best = '', bv = -1; (el || '').split(' ').forEach(function (e) { var v = +e.slice(1) || 0; if (v > bv) { bv = v; best = e[0]; } }); return best; }
+  function elemBars(el) {
+    var m = {}; (el || '').split(' ').filter(Boolean).forEach(function (e) { m[e[0]] = +e.slice(1) || 0; });
+    return '<div class="ebars">' + ['지', '수', '화', '풍'].map(function (k) { var v = m[k] || 0; return '<div class="ebar e-' + EL_KO[k] + '"><span>' + k + '</span><i><b style="width:' + v * 10 + '%"></b></i><em>' + v + '</em></div>'; }).join('') + '</div>';
+  }
+  function sceneBg(id) {
+    var c = SC.s && SC.s[id];
+    if (!c) return '';
+    return '<div class="hero-bg" aria-hidden="true"><div style="width:' + SC.W + 'px;height:' + SC.H + 'px;background:url(img/' + SC.sheets[c[0]] + ') -' + c[1] + 'px -' + c[2] + 'px"></div></div>';
+  }
+  function hero(o) {
+    return '<section class="hero el-' + (o.el || 'none') + '">' + (o.bg || '') + '<div class="hero-pic">' + (o.pic || '') + (o.picCap ? '<div class="small muted">' + o.picCap + '</div>' : '') + '</div><div class="hero-main"><h1>' + o.title + '</h1>' +
+      (o.tags ? '<div class="hero-tags">' + o.tags + '</div>' : '') + (o.sub ? '<div class="hero-sub">' + o.sub + '</div>' : '') +
+      (o.facts && o.facts.length ? '<dl class="hero-facts">' + o.facts.filter(function (f) { return f && f[1]; }).map(function (f) { return '<dt>' + f[0] + '</dt><dd>' + f[1] + '</dd>'; }).join('') + '</dl>' : '') +
+      (o.cmds ? '<div class="hero-cmds">' + o.cmds + '</div>' : '') + '</div>' + (o.side ? '<div class="hero-side">' + o.side + '</div>' : '') + '</section>';
+  }
+  function bigBadge(txt, col, score, lab) {
+    return '<div class="big-tier" style="background:' + col + '">' + esc(txt) + '</div>' + (score != null ? '<div class="hero-score"><b>' + score + '</b><span>' + lab + '</span></div>' : '');
+  }
+
+  // ---------------------------------------------------------------- NPC 그림(움직임·크게 보기)
+  var NPCS = [];
+  var NROLE = { npcgen_shop: '상점', npcgen_limitshop: '상점', airplane: '비행선', transman: '순간이동사', itemchange: '교환', npc_transmigration: '환생', npcgen_savepoint: '기록', npcgen_healer: '간호사', npcgen_petskillshop: '펫 기술', npcgen_poolitemshop: '창고' };
+  function npcGif(g) { return (A.npcgif || {})[g]; }
+  function npcPic(n, box, role) {
+    if (!n || !n.g) return '';
+    var gf = npcGif(n.g), k = NPCS.push({ n: n, role: role || '' }) - 1, inner;
+    if (gf) { var sc = Math.min(3, (box || 96) / gf[1], (box || 96) / gf[2]); sc = sc >= 1 ? Math.max(1, Math.floor(sc * 2) / 2) : sc; inner = '<img class="gif" loading="lazy" src="' + gf[0] + '" width="' + Math.round(gf[1] * sc) + '" height="' + Math.round(gf[2] * sc) + '" alt="' + esc(n.name || '') + '">'; }
+    else inner = n.g >= 100000 ? spr('cr', 'a' + n.g, box, 2) : (A.k['ic:i' + n.g] ? spr('ic', 'i' + n.g, box, 2) : '');
+    if (!inner) return '';
+    return '<button class="npc-pic" data-npc="' + k + '" title="' + esc(n.name || '') + ' — 크게 보기" style="min-width:' + Math.round((box || 96) * 0.8) + 'px;min-height:' + Math.round((box || 96) * 0.8) + 'px">' + inner + '</button>';
+  }
+  function openNpc(k) {
+    var o = NPCS[k]; if (!o) return;
+    var n = o.n, gf = npcGif(n.g), n0 = FIGS.length;
+    var pic = gf ? '<img class="gif" src="' + gf[0] + '" width="' + Math.round(gf[1] * Math.min(4, 280 / gf[1], 280 / gf[2])) + '" alt="">' : npcPic(n, 220);
+    var t = (GD.towns || []).filter(function (x) { return x.floor === n.floor; })[0], ti = (GD.towns || []).indexOf(t);
+    var html = '<div class="npc-box"><div class="npc-big">' + pic + '</div><div><h2>' + esc(n.name) + '</h2><dl class="hero-facts">' + (o.role ? '<dt>하는 일</dt><dd>' + esc(o.role) + '</dd>' : '') +
+      '<dt>장소</dt><dd>' + esc(n.fname || '') + ' <span class="muted">(' + n.floor + (n.x != null ? ' / ' + n.x + ',' + n.y : '') + ')</span></dd>' + (n.x != null ? '<dt>GM 이동</dt><dd>' + warp(n.floor, n.x, n.y + 1) + '</dd>' : '') +
+      '<dt>그림 번호</dt><dd>' + n.g + '</dd>' + (t ? '<dt>가는 길</dt><dd><a href="#/town/' + ti + '">' + esc(t.name) + ' 가는 길</a></dd>' : '') + '</dl></div></div>' +
+      (n.x != null ? '<div class="figs">' + (SC.mm && SC.mm[n.floor] ? mmHtml(n.floor, [{ x: n.x, y: n.y, k: 'npc', t: n.name }], null, n.name + ' 위치', Math.min(innerWidth - 70, 740)) : '') + '</div>' : '');
+    FIGS.length = n0;
+    $('#modalBody').className = 'modal npc-modal';
+    $('#modalBody').innerHTML = '<button class="icon-btn x npc-x" id="mx" title="닫기">✕</button>' + html;
+    LB.k = -1; $('#modal').hidden = false;
+  }
+  document.addEventListener('click', function (e) {
+    var b = e.target.closest('[data-npc]');
+    if (b) { e.preventDefault(); e.stopPropagation(); openNpc(+b.getAttribute('data-npc')); }
+  }, true);
+
   // ---------------------------------------------------------------- 장면(게임 화면 같은 그림)·미니맵
   var KCOL = { npc: '#ff3b30', boss: '#ff3b30', arrive: '#2ecc71', heal: '#ff6fb5', portal: '#a970ff', warp: '#35d0ff' };
   function svgLabel(x, y, n, t, col, W, H, small) {
@@ -324,9 +379,8 @@
     h += '<div class="tbl-wrap"><table><tr><th>이름</th><th>샴기르 좌표</th><th>메뉴 묶음</th></tr>' + (GD.portals || []).map(function (p) {
       return '<tr><td><b>' + esc(p.title) + '</b></td><td>' + (p.pos ? p.pos.join(',') + ' ' + warp(1000, p.pos[0], p.pos[1] + 2) : '') + '</td><td class="small">' + p.groups.map(function (g) { return esc(g.name) + (g.rows.length ? ' (' + g.rows.length + ')' : ''); }).join(' · ') + '</td></tr>';
     }).join('') + '</table></div></div>';
-    h += '<div class="panel"><h3>4. 마을 · 바로 가기</h3><div class="tbl-wrap"><table><tr><th>곳</th><th>맵</th><th>GM 이동</th></tr>' + (GD.towns || []).map(function (t) {
-      return '<tr><td>' + esc(t.name) + '</td><td>' + t.floor + ' (' + t.x + ',' + t.y + ')</td><td>' + warp(t.floor, t.x, t.y) + '</td></tr>';
-    }).join('') + '</table></div></div>';
+    h += '<div class="panel"><h3>4. 마을 · 가는 법</h3><p class="muted small">샴기르 귀환 지점에서 보통 방법(고대 신전 포탈·워프·비행선·순간이동사·걷기)으로 가는 길. 카드를 누르면 층마다 미니맵 경로(노란 선)가 나옵니다.</p><div class="grid town-cards">' + (GD.towns || []).map(townCard).join('') + '</div>' +
+      ((GD.town_bad || []).length ? '<p class="small"><span class="tag boss">보통 방법으로 못 감</span> ' + GD.town_bad.map(esc).join(', ') + ' — GM 이동만 가능</p>' : '') + '</div>';
     // 명령
     h += '<div class="panel"><h3>5. 채팅 명령 (대괄호까지 그대로 입력)</h3><div class="tbl-wrap"><table><tr><th>명령</th><th>예</th><th>하는 일</th></tr>' + (GD.cmds || []).map(function (c) {
       return '<tr><td><code>' + esc(c.cmd) + '</code>' + (c.ok ? '' : ' <span class="inferred">소스에서 못 찾음</span>') + '</td><td>' + copyBtn(c.ex) + '</td><td>' + esc(c.desc) + (c.usage ? '<div class="muted small">게임 안내: ' + esc(c.usage) + '</div>' : '') + '</td></tr>';
@@ -409,7 +463,14 @@
   function pageHunt(id) {
     var x = huntById[id];
     if (!x) { app.innerHTML = '<p>사냥터를 찾지 못했습니다.</p>'; return; }
-    var h = '<p><a href="#/hunts">← 사냥터 목록</a></p><h1>' + esc(x.label) + '</h1><div class="muted">' + esc(x.catname) + ' · 몹 Lv.' + x.lo + (x.hi !== x.lo ? '~' + x.hi : '') + ' · 층 ' + x.nfloors + '개</div>';
+    var m0 = x.mobs[0], b0 = x.bosses[0];
+    var h = '<p><a href="#/hunts">← 사냥터 목록</a></p>' + hero({
+      el: 'hunt', bg: (x.scenes || [])[0] ? sceneBg(x.scenes[0].id) : '', pic: m0 ? petImg(m0.img, 150, 2) : (b0 ? petImg(b0.img, 150, 2) : ''), picCap: m0 ? esc(m0.name) : '',
+      title: esc(x.label), tags: '<span class="tag">' + esc(x.catname) + '</span>' + (x.tier != null ? '<span class="tag legend">희귀 T' + (x.tier + 1) + '</span>' : '') + (x.bosses.length ? '<span class="tag boss">보스 ' + x.bosses.length + '</span>' : ''),
+      facts: [['몹 레벨', 'Lv.' + x.lo + (x.hi !== x.lo ? '~' + x.hi : '')], ['층', x.nfloors + '개'], ['EXP/전투', '<b>' + fmt(x.exp) + '</b> · 레벨업까지 ' + (x.battles == null ? '-' : x.battles) + '전투'],
+        ['포획 펫', x.mobs.filter(function (m) { return m.catch && m.pet; }).slice(0, 6).map(function (m) { return petLink(m.pet, m.name); }).join(', ')], ['입구', x.entry ? warp(x.entry[0], x.entry[1], x.entry[2]) : '']],
+      side: bigBadge('Lv' + x.lo, '#2457c5', null, '') + '<div class="hero-mini small">권장 시작 레벨</div>'
+    });
     h += '<div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(280px,1fr));margin-top:12px">';
     h += '<div class="panel"><h3>가는 길</h3>' + (x.routes.length ? '<ol>' + x.routes.map(function (r) { return '<li>' + esc(r.path) + ' ' + warp(r.to[0], r.to[1], r.to[2]) + '</li>'; }).join('') + '</ol>' :
       '<p class="muted">샴기르 포탈 메뉴에 직접 줄이 없습니다. 이웃 층(8.0 워프·안내인)으로 들어갑니다.</p>') + (x.entry ? '<p>입구 GM 이동: ' + warp(x.entry[0], x.entry[1], x.entry[2]) + '</p>' : '') + '</div>';
@@ -451,10 +512,6 @@
   function huntsOf(cat) { return H.hunts.filter(function (x) { return x.cat === cat; }); }
   function portalOf(key) { return (GD.portals || []).filter(function (p) { return p.key === key; })[0]; }
   function sysOf(key) { return (Q.systems || []).filter(function (s) { return s.key === key; })[0]; }
-  function npcPic(n, box) {
-    if (!n || !n.g) return '';
-    return n.g >= 100000 ? spr('cr', 'a' + n.g, box) : (A.k['ic:i' + n.g] ? spr('ic', 'i' + n.g, box) : '');
-  }
   function questPic(q, box) {
     var r = (q.rewards || []).filter(function (x) { return x.k === 'pet' && petById[x.id]; })[0];
     if (r) return petImg(petById[r.id].img, box);
@@ -600,7 +657,7 @@
       var e = Q.exchanges.filter(function (x) { return !q || JSON.stringify(x).toLowerCase().indexOf(q) >= 0; });
       $('#qn').textContent = e.length + '개';
       $('#ql').innerHTML = '<div class="tbl-wrap"><table><tr><th>NPC</th><th>조건</th><th>건네는 것</th><th>받는 것 / 이동</th></tr>' + e.slice(0, 400).map(function (x) {
-        return '<tr><td>' + npcPos(x.npc) + '</td><td class="small">' + x.cond.map(esc).join(' · ') + '</td><td class="small">' + thingIcons(x.take) + '</td><td class="small">' + thingIcons(x.reward) +
+        return '<tr><td><div class="npc-cell">' + npcPic(x.npc, 96, '교환·이동') + '<div>' + npcPos(x.npc) + '</div></div></td><td class="small">' + x.cond.map(esc).join(' · ') + '</td><td class="small">' + thingIcons(x.take) + '</td><td class="small">' + thingIcons(x.reward) +
           (x.warp ? (x.reward.length ? '<br>' : '') + '이동: ' + x.warp.map(function (w) { return esc(w.fname) + ' ' + warp(w.floor, w.x, w.y); }).join(' / ') : '') + '</td></tr>';
       }).join('') + '</table></div>';
     }
@@ -609,7 +666,7 @@
   function npcTab() {
     return (Q.systems || []).map(function (s) {
       var t = '<details class="panel"' + (['airplane', 'transman', 'itemchange', 'npc_transmigration'].indexOf(s.key) >= 0 ? ' open' : '') + '><summary>' + esc(s.title) + ' <span class="muted small">' + s.rows.length + '명</span></summary><p class="muted">' + esc(s.desc) + '</p>';
-      t += '<div class="tbl-wrap"><table><tr><th>NPC</th><th>장소</th><th>좌표</th><th></th></tr>' + s.rows.map(function (r) { return '<tr><td>' + esc(r.name) + (r.sa80 ? ' <span class="tag v80">8.0</span>' : '') + '</td><td>' + esc(r.fname) + '</td><td>' + r.floor + ' (' + r.x + ',' + r.y + ')</td><td>' + (r.x == null ? '<span class="muted">위치 정보 없음</span>' : warp(r.floor, r.x, r.y + 1) + (r.scene != null ? ' ' + sceneHtml(r.scene, [{ x: r.x, y: r.y, k: 'npc', t: r.name }], '', 0.3) : '')) + '</td></tr>'; }).join('') + '</table></div>';
+      t += '<div class="tbl-wrap"><table><tr><th>NPC</th><th>장소</th><th>좌표</th><th></th></tr>' + s.rows.map(function (r) { return '<tr><td><div class="npc-cell">' + npcPic(r, 96, s.title) + '<div>' + esc(r.name) + (r.sa80 ? ' <span class="tag v80">8.0</span>' : '') + '</div></div></td><td>' + esc(r.fname) + '</td><td>' + r.floor + ' (' + r.x + ',' + r.y + ')</td><td>' + (r.x == null ? '<span class="muted">위치 정보 없음</span>' : warp(r.floor, r.x, r.y + 1) + (r.scene != null ? ' ' + sceneHtml(r.scene, [{ x: r.x, y: r.y, k: 'npc', t: r.name }], '', 0.3) : '')) + '</td></tr>'; }).join('') + '</table></div>';
       if (s.recipes && s.recipes.length) t += '<h3>만들 수 있는 물건 ' + s.recipes.length + '</h3><div class="tbl-wrap"><table><tr><th>결과</th><th>재료</th><th>수수료</th><th>NPC</th></tr>' + s.recipes.map(function (r) {
         return '<tr><td>' + thingIcons(r.make.map(function (m) { return { k: 'item', id: m.id, name: m.name }; })) + '</td><td class="small">' + thingIcons(r.need.map(function (n) { return { k: 'item', id: n.id, name: n.name, n: n.n }; })) + '</td><td class="num">' + esc(r.gold) + '</td><td class="small">' + esc(r.npc) + ' · ' + esc(r.fname) + '</td></tr>';
       }).join('') + '</table></div>';
@@ -628,7 +685,7 @@
   }
   function stepHtml(st, kind, n) {
     var verb = kind === 'start' ? '부탁 받기' : '완료·건네기', br = st.branches || [];
-    var s = '<li><div class="step-grid"><div><b>' + verb + '</b> — ' + npcPos(st.npc) + (br.length > 1 ? ' <span class="tag">조건 분기 ' + br.length + '</span>' : '');
+    var s = '<li><div class="step-grid"><div><div class="step-npc">' + npcPic(st.npc, 120, verb) + '<div><b>' + verb + '</b> — ' + npcPos(st.npc) + '</div></div>' + (br.length > 1 ? ' <span class="tag">조건 분기 ' + br.length + '</span>' : '');
     s += br.slice(0, 10).map(function (b, k) { return branchHtml(b, k, br.length); }).join('') + (br.length > 10 ? '<p class="muted small">갈래 ' + (br.length - 10) + '개 더(선택지·답안 등)</p>' : '');
     var lab = st.npc.name + (kind === 'start' ? '에게 부탁 받기' : '에게 건네기');
     s += '</div><div class="figs">' + (st.scene != null ? sceneHtml(st.scene, [{ x: st.npc.x, y: st.npc.y, k: 'npc', n: n, t: lab }], n + '. ' + st.npc.fname + ' (' + st.npc.x + ',' + st.npc.y + ')', bigScale(2)) : (st.npc.x == null ? '<span class="muted small">위치 정보 없음 — 그림 생략</span>' : '')) +
@@ -640,8 +697,15 @@
     var q = guideById[id] || questById[+id];
     if (!q) { app.innerHTML = '<p>퀘스트를 찾지 못했습니다. <a href="#/quests">목록</a></p>'; return; }
     var done = qDone()[q.no];
-    var h = '<p><a href="#/quests">← 퀘스트 목록</a></p><div class="detail-head"><div class="detail-pic">' + (q.guide ? q.pic(140) : questPic(q, 140)) + '</div><div><h1>' + esc(q.title) + '</h1><div>' + tags(q.tags) + (q.guide ? '' : '<span class="inferred">자료에서 추론</span>') + '</div>' +
-      '<p class="muted">' + esc(q.region) + (q.lv ? ' · 권장 Lv.' + q.lv + ' 이상' : '') + (q.guide ? '' : ' · 이벤트 #' + q.no) + '</p><button class="chip' + (done ? ' on' : '') + '" id="qdone">' + (done ? '✓ 완료함' : '완료 표시') + '</button></div></div>';
+    var st0 = q.guide ? null : (q.start[0] || q.finish[0]);
+    var h = '<p><a href="#/quests">← 퀘스트 목록</a></p>' + hero({
+      el: 'quest', bg: st0 && st0.scene != null ? sceneBg(st0.scene) : '', pic: q.guide ? q.pic(150) : questPic(q, 150),
+      title: esc(q.title), tags: tags(q.tags) + (q.guide ? '' : '<span class="inferred">자료에서 추론</span>'),
+      facts: [['지역', esc(q.region)], ['권장', q.lv ? 'Lv.' + q.lv + ' 이상' : ''], ['시작 NPC', st0 ? esc(st0.npc.name) + ' <span class="muted small">' + esc(st0.npc.fname) + '</span>' : ''],
+        ['단계', q.guide ? '' : q.nsteps + '단계'], ['보상', !q.guide && q.rewards.length ? thingIcons(q.rewards.slice(0, 6)) : '']],
+      cmds: '<button class="chip' + (done ? ' on' : '') + '" id="qdone">' + (done ? '✓ 완료함' : '완료 표시') + '</button>',
+      side: q.guide ? '' : bigBadge('#' + q.no, '#475467', null, '') + '<div class="hero-mini small">이벤트 번호</div>'
+    });
     if (q.guide) { h += '<div class="panel">' + q.body() + '</div>'; }
     else {
       var first = (q.start[0] || q.finish[0] || {}).branches || [];
@@ -776,7 +840,7 @@
   function petCard(p) {
     return '<div class="card pet-card" data-go="#/pet/' + p.id + '"><div class="pic">' + petAnim(p, 100) + '</div><div class="idrow"><span>' + tierBadge(p.tier) + ' <span class="id">' + p.id + '</span></span>' + copyBtn('[gm petmake ' + p.id + ' 1]', 'petmake') + '</div>' +
       '<div class="nm" title="' + esc(p.n) + '">' + esc(p.n) + '</div><div>' + tags(p.c) + '<span class="tag">' + esc(p.fam) + '</span></div><div class="idrow small"><span>' + elemHtml(p.el) + '</span>' + (p.r.length ? rows12(p.r) : '') + '</div>' +
-      '<div class="muted small ellip">' + esc(p.get.join('·')) + (p.mlv ? ' · Lv.' + p.mlv + '~' : '') + ' · Lv100 ' + p.sc + ' · 성장 ' + p.gr + '</div></div>';
+      '<div class="muted small ellip">' + esc(p.get.join('·')) + (p.mlv ? ' · Lv.' + p.mlv + '~' : '') + ' · S급 Lv100 ' + p.sc + '</div></div>';
   }
   function opts(list, cur, all) { return '<option value="">' + all + '</option>' + list.map(function (x) { var v = Array.isArray(x) ? x[0] : x, l = Array.isArray(x) ? x[1] : x; return '<option value="' + esc(v) + '"' + (String(cur) === String(v) ? ' selected' : '') + '>' + esc(l) + '</option>'; }).join(''); }
   function uniq(arr) { var o = []; arr.forEach(function (x) { if (x != null && o.indexOf(x) < 0) o.push(x); }); return o; }
@@ -784,7 +848,7 @@
     if (params.cat != null) pState.cat = params.cat;
     if (params.q != null) pState.q = params.q;
     var fams = uniq(P.map(function (p) { return p.fam; })).sort(), orgs = uniq(P.map(function (p) { return p.org; })).sort();
-    var h = '<h1>펫 도감 <span class="muted small">' + P.length + '종</span></h1><p class="muted">빨간 숫자 = <code>[gm petmake 번호 레벨]</code>. 등급 S+~D = 서버 생성식으로 계산한 Lv100 능력 합(기본치·초기값·성장률)의 순위(<a href="#/pets?tiers=1">기준</a>, guide-overrides.json으로 보정). 막대 12칸 = 탑승 가능한 몸.</p>';
+    var h = '<h1>펫 도감 <span class="muted small">' + P.length + '종</span></h1><p class="muted">빨간 숫자 = <code>[gm petmake 번호 레벨]</code>. 등급 S+~D = 서버 식(gmsv)으로 계산한 <b>S급(최고) 개체 Lv100</b> 능력 합의 순위(<a href="#/pets?tiers=1">기준</a>, guide-overrides.json으로 보정). 막대 12칸 = 탑승 가능한 몸.</p>';
     h += '<div class="chips" id="pc">' + [''].concat(PCATS).map(function (c) { var n = c ? P.filter(function (p) { return p.c.indexOf(c) >= 0; }).length : P.length; return '<button class="chip' + (pState.cat === c ? ' on' : '') + '" data-c="' + c + '">' + (c ? (c === '탑승' ? '탑승 가능' : c) : '전체') + ' ' + n + '</button>'; }).join('') + '</div>';
     h += '<div class="chips" id="pt">' + ['', 'S+', 'S', 'A', 'B', 'C', 'D'].map(function (t) { var n = t ? P.filter(function (p) { return p.tier === t; }).length : ''; return '<button class="chip' + (pState.tier === t ? ' on' : '') + '" data-c="' + t + '">' + (t ? t + '급 ' + n : '등급 전체') + '</button>'; }).join('') + ' <a class="chip" href="#/pets?tiers=1">등급 기준 보기</a></div>';
     if (params.tiers) h += tierCriteria();
@@ -792,7 +856,7 @@
       '<select id="pf">' + opts(fams, pState.fam, '계열 전체') + '</select><select id="pe">' + opts([['지', '지'], ['수', '수'], ['화', '화'], ['풍', '풍']], pState.el, '속성 전체') + '</select>' +
       '<select id="pg2">' + opts(['야생', '보스', '퀘스트', 'GM 전용'], pState.get, '얻는 방법 전체') + '</select><select id="po">' + opts(orgs, pState.org, '출신 전체') + '</select>' +
       '<select id="pb">' + opts([['a', '출현 Lv~30'], ['b', '31~80'], ['c', '81~150'], ['d', '151+'], ['n', '야생 없음']], pState.band, '출현 레벨 전체') + '</select>' +
-      '<select id="ps">' + opts([['id', '번호순'], ['name', '이름순'], ['sc', '등급 점수(Lv100 능력 합)'], ['gr', '성장률(LVUPPOINT)'], ['sum', '기본치 합'], ['g0', '체력 성장'], ['g1', '공격 성장'], ['g2', '방어 성장'], ['g3', '순발 성장'], ['hp', '체력 기본치'], ['atk', '공격 기본치'], ['def', '방어 기본치'], ['spd', '순발 기본치'], ['mlv', '출현 레벨']], pState.sort, '정렬') + '</select><span class="count" id="pn"></span></div>' +
+      '<select id="ps">' + opts([['id', '번호순'], ['name', '이름순'], ['sc', '등급 점수(S급 Lv100 합)'], ['gt', 'S급 레벨당 성장 합'], ['gr', '포획 성장률(LVUPPOINT)'], ['sum', '기본치 합'], ['g0', 'S급 체력 성장'], ['g1', 'S급 공격 성장'], ['g2', 'S급 방어 성장'], ['g3', 'S급 순발 성장'], ['hp', '체력 기본치'], ['atk', '공격 기본치'], ['def', '방어 기본치'], ['spd', '순발 기본치'], ['mlv', '출현 레벨']], pState.sort, '정렬') + '</select><span class="count" id="pn"></span></div>' +
       '<div class="grid cards" id="pg"></div><button class="more" id="pm">더 보기</button>';
     app.innerHTML = h;
     function band(p) { var l = p.mlv; return l == null ? 'n' : l <= 30 ? 'a' : l <= 80 ? 'b' : l <= 150 ? 'c' : 'd'; }
@@ -815,6 +879,7 @@
       else if (pState.sort === 'sum') l.sort(function (a, b) { return sum(b) - sum(a) || a.id - b.id; });
       else if (pState.sort === 'sc') l.sort(function (a, b) { return b.sc - a.sc || a.id - b.id; });
       else if (pState.sort === 'gr') l.sort(function (a, b) { return b.gr - a.gr || a.id - b.id; });
+      else if (pState.sort === 'gt') { var gs = function (p) { return p.grw[0] + p.grw[1] + p.grw[2] + p.grw[3]; }; l.sort(function (a, b) { return gs(b) - gs(a) || a.id - b.id; }); }
       else if (/^g\d$/.test(pState.sort)) { var gk = +pState.sort[1]; l.sort(function (a, b) { return b.grw[gk] - a.grw[gk] || a.id - b.id; }); }
       else if (pState.sort === 'mlv') l.sort(function (a, b) { return (a.mlv == null ? 999 : a.mlv) - (b.mlv == null ? 999 : b.mlv) || a.id - b.id; });
       return l;
@@ -840,20 +905,40 @@
     }
     return s + '</div>';
   }
+  var GMSV_REF = '<p class="small muted">근거(gmsv): char/enemy.c:295 atoi로 읽기 · 767 ENEMY_getRank · 1497-1516 ENEMY_createPetFromEnemyIndex · char/char_data.c:1281-1336 CHAR_PetLevelUp · char/char.c:2973-3023 화면 값 · setup.cf:177 soloHuntBalance=1 · include/util.h:79 RAND(양 끝 포함)</p>';
+  var RANK_RAND = [[450, 500], [470, 520], [490, 540], [510, 560], [530, 580], [550, 600]];
   function tierCriteria() {
     var c = M.tier_cut || {};
-    return '<div class="panel"><h3>펫 등급(S+~D) 기준</h3><p>서버가 펫을 만들 때 쓰는 식(char/enemy.c PARAM_CAL) 그대로 <b>능력 = ((레벨 − 1) × 성장률 LVUPPOINT + 초기값 INITNUM) × 기본치</b> (체력·공격·방어·순발 각각, 값 ÷100 표시). ' +
-      '기본치·성장률은 서버 enemybase.txt에서 읽습니다(만들 때 기본치 ±2 무작위). 등급 점수 = <b>Lv100 때 네 능력의 합</b>을 보스를 뺀 전체 펫과 비교한 순위입니다.</p><div class="tbl-wrap"><table><tr><th>등급</th><th>순위(상위)</th><th>점수 기준(이상)</th></tr>' +
+    return '<div class="panel"><h3>펫 등급(S+~D) 기준 — S급 개체 Lv100</h3><p>등급 점수 = <b>S급(최고) 개체를 Lv1에 잡아 Lv100까지 키웠을 때 네 능력(체력·공격·방어·순발)의 합</b>(기댓값, ÷100 표시)을 보스를 뺀 전체 펫과 비교한 순위입니다.</p>' +
+      '<ol class="small"><li><b>잡을 때(개체 차이)</b>: 기본치 B 마다 <b>−2~+2</b> 무작위(고르게 5가지). S급 = 네 능력 모두 +2, 평균 = ±0, 최저 = 모두 −2. 이 값(B±2)이 평생 성장 기준으로 저장됩니다.</li>' +
+      '<li>그다음 <b>추가 10점</b>을 네 능력에 무작위로 나눔(합은 늘 10, 한 능력 평균 2.5).</li>' +
+      '<li><b>Lv1 능력</b> = INITNUM × (B±2 + 추가점). Lv L(&gt;1)에서 잡으면 ((L−1)×LVUPPOINT + INITNUM) × (B±2 + 추가점) — LVUPPOINT는 이때만 쓰입니다(서버가 atoi로 읽어 4.5 → 4).</li>' +
+      '<li><b>레벨업 1번</b> = 능력마다 int((B±2 + 그 레벨 무작위 10점 중 몫) × f), f = RAND(종 등급표) × 0.02. 종 등급은 기본치 합(ΣB)으로: 100↑ 9.0~10.0 · 95↑ 9.4~10.4 · 90↑ 9.8~10.8 · 85↑ 10.2~11.2 · 80↑ 10.6~11.6 · 그 아래 11.0~12.0. 기본치 합이 낮은 종일수록 f가 커서 성장이 보정됩니다.</li>' +
+      '<li>표의 “레벨당 성장”·Lv100/200/300 은 레벨마다의 무작위(f, 10점)를 기댓값으로 계산(float 계산 뒤 int 자름까지 서버와 같게). 실제 개체는 레벨마다 조금씩 오르내립니다.</li>' +
+      '<li>게임 화면 값: 내구력 = 4×체력+공격+방어+순발, 공격력 = 공격+0.1×(방어+체력)+0.05×순발, 방어력 = 방어+0.1×(공격+체력)+0.05×순발, 순발력 = 순발 (모두 ÷100 단위).</li></ol>' + GMSV_REF +
+      '<div class="tbl-wrap"><table><tr><th>등급</th><th>순위(상위)</th><th>S급 Lv100 합(이상)</th></tr>' +
       [['S+', '2%'], ['S', '8%'], ['A', '22%'], ['B', '47%'], ['C', '75%'], ['D', '나머지']].map(function (t) { return '<tr><td>' + tierBadge(t[0]) + '</td><td>' + t[1] + '</td><td class="num">' + (c[t[0]] != null ? c[t[0]] : '-') + '</td></tr>'; }).join('') +
       '</table></div><p class="muted small">전설·거대·기계는 등급과 별도로 배지로 표시. 수동 보정: localization/ko-KR/guide-overrides.json pets.{번호}.tier</p></div>';
   }
+  function gameVals(v) {
+    return [Math.floor(4 * v[0] + v[1] + v[2] + v[3]), Math.floor(v[1] + 0.1 * v[2] + 0.1 * v[0] + 0.05 * v[3]), Math.floor(v[2] + 0.1 * v[1] + 0.1 * v[0] + 0.05 * v[3]), Math.floor(v[3])];
+  }
+  function r2(x) { return Math.round(x * 100) / 100; }
   function statTable(p) {
-    var lab = ['체력', '공격', '방어', '순발'];
-    return '<div class="tbl-wrap"><table><tr><th></th>' + lab.map(function (l) { return '<th class="num">' + l + '</th>'; }).join('') + '<th class="num">합</th></tr>' +
-      [['기본치', p.base], ['Lv1 능력(초기)', p.ini], ['레벨당 성장', p.grw], ['Lv100 능력', p.l100]].map(function (r) {
-        var sum = r[1].reduce(function (a, b) { return a + b; }, 0);
-        return '<tr><td>' + r[0] + '</td>' + r[1].map(function (v) { return '<td class="num">' + v + '</td>'; }).join('') + '<td class="num"><b>' + Math.round(sum * 100) / 100 + '</b></td></tr>';
-      }).join('') + '</table></div><p class="muted small">초기값 INITNUM ' + p.init + ' · 성장률 LVUPPOINT ' + p.gr + ' · 능력 = ((Lv−1)×' + p.gr + ' + ' + p.init + ') × 기본치 ÷ 100</p>';
+    var lab = ['체력', '공격', '방어', '순발'], R = p.roll || {}, S = R.s;
+    if (!S) return '';
+    function row(name, arr, cls) {
+      var sum = arr.reduce(function (a, b) { return a + b; }, 0);
+      return '<tr' + (cls ? ' class="' + cls + '"' : '') + '><td>' + name + '</td>' + arr.map(function (v) { return '<td class="num">' + v + '</td>'; }).join('') + '<td class="num"><b>' + r2(sum) + '</b></td></tr>';
+    }
+    function head(t) { return '<tr><th>' + t + '</th>' + lab.map(function (l) { return '<th class="num">' + l + '</th>'; }).join('') + '<th class="num">합</th></tr>'; }
+    return '<div class="tbl-wrap"><table class="stat-t">' + head('S급(최고) 개체') +
+      row('종 기본치 B', p.base, 'dim') + row('S급 기본치 (B+2)', S.a) + row('S급 Lv1 능력', S.l1) + row('S급 레벨당 성장', S.g) + row('<b>S급 Lv100</b>', S.l100, 'hl') + row('S급 Lv200', S.l200) + row('S급 Lv300', S.l300) +
+      '<tr class="dim"><td>게임 화면 Lv100<br><span class="small">내구·공격·방어·순발</span></td>' + gameVals(S.l100).map(function (v) { return '<td class="num">' + v + '</td>'; }).join('') + '<td></td></tr></table></div>' +
+      '<details class="roll-more"><summary>평균 개체 · 최저 개체 보기</summary><div class="tbl-wrap"><table class="stat-t">' + head('개체') +
+      [['a', '평균(±0)'], ['m', '최저(−2)']].map(function (k) { var X = R[k[0]]; return row(k[1] + ' 기본치', X.a, 'dim') + row(k[1] + ' Lv1', X.l1) + row(k[1] + ' 레벨당', X.g) + row(k[1] + ' Lv100', X.l100, 'hl') + row(k[1] + ' Lv300', X.l300); }).join('') + '</table></div></details>' +
+      '<p class="muted small">INITNUM ' + p.init + ' · LVUPPOINT ' + p.gr + '(포획 Lv&gt;1일 때만) · 종 등급 ' + p.rk + '(기본치 합 ' + p.base.reduce(function (a, b) { return a + b; }, 0) + ') → 레벨업 f ' + (RANK_RAND[p.rk][0] * 0.02).toFixed(1) + '~' + (RANK_RAND[p.rk][1] * 0.02).toFixed(1) +
+      '<br>Lv1 = INITNUM × (B±2 + 추가 10점 몫) · 레벨당 = int((B±2 + 10점 몫) × f)의 기댓값 · <a href="#/pets?tiers=1">식 자세히</a></p>';
   }
   function spotsHtml(p) {
     if (!(p.spots || []).length) return '';
@@ -864,10 +949,10 @@
           '</td><td class="num">' + w.rate + '%</td><td>' + (w.c ? '<span class="tag ride">가능</span>' : '<span class="tag">불가</span>') + '</td><td>' + warp(w.f, cx, cy) + (hx && hx.route ? ' <a href="#/hunt/' + w.hid + '">경로</a>' : '') + '</td></tr>';
       }).join('') + '</table></div><p class="muted small">출현 비율 = 그 조우 구역에서 이 몹이 뽑힐 비율(그룹 가중치 × 그룹 안 비율). Lv1 출현은 강조 표시. ' + (p.nspots > p.spots.length ? '외 ' + (p.nspots - p.spots.length) + '곳' : '') + '</p></div>';
   }
-  function statBars(st, gr) {
-    var lab = ['체력', '공격', '방어', '순발'], mx = 60;
-    return '<div class="bars">' + st.map(function (v, k) { return '<div class="bar"><span>' + lab[k] + '</span><i style="width:' + Math.min(100, v / mx * 100) + '%"></i><b>' + v + '</b></div>'; }).join('') +
-      '<div class="bar"><span>성장률</span><i style="width:' + Math.min(100, gr / 7 * 100) + '%;background:var(--warn)"></i><b>' + gr + '</b></div></div>';
+  function statBars(p) {
+    var lab = ['체력', '공격', '방어', '순발'], S = (p.roll || {}).s, mx = M.l100max || [600, 600, 600, 600];
+    if (!S) return '';
+    return '<div class="bars"><div class="small muted">S급 Lv100 능력</div>' + S.l100.map(function (v, k) { return '<div class="bar"><span>' + lab[k] + '</span><i style="width:' + Math.min(100, v / mx[k] * 100) + '%"></i><b>' + v + '</b></div>'; }).join('') + '</div>';
   }
 
   // ---------------------------------------------------------------- 움직임 보기(동작·8방향 캔버스)
@@ -880,7 +965,7 @@
     SA.anim = SA.anim || {};
     if (SA.anim[id]) { cb(SA.anim[id]); return; }
     var sc = document.createElement('script');
-    sc.src = 'media/anim/' + id + '.js';
+    sc.src = String(id).charAt(0) === 'r' ? RB(id) + 'media/ranim/' + String(id).slice(1) + '.js' : 'media/anim/' + id + '.js';
     sc.onload = function () { cb(SA.anim[id] || null); };
     sc.onerror = function () { cb(null); };
     document.head.appendChild(sc);
@@ -888,7 +973,7 @@
   var AV = null;
   function avStop() { if (AV && AV.timer) clearTimeout(AV.timer); if (AV) AV.dead = true; AV = null; }
   function avHtml(p, rr) {
-    var rideRows = rr && rr.av && rr.av.length ? rr.av : [];
+    var rideRows = rr && rr.av ? Object.keys(rr.av) : [];
     return '<div class="panel av" id="av"><div class="av-head"><h3>움직임 보기</h3>' +
       (rideRows.length ? '<div class="seg" id="avMode"><button class="on" data-m="pet">펫</button><button data-m="ride">탑승</button></div><select id="avBody" hidden>' + rideRows.map(function (k) { return '<option value="' + k + '">' + esc(BODY[k] || ('몸 ' + k)) + '</option>'; }).join('') + '</select>' : '') +
       '</div><div class="av-main"><div class="av-stage"><canvas id="avCv" width="10" height="10"></canvas><div class="av-info small muted" id="avInfo">불러오는 중…</div><div class="small muted" id="avNote"></div></div>' +
@@ -942,9 +1027,9 @@
           if (!d.a[st.act]) st.act = acts()[0];
           if (!d.a[st.act][st.dir]) st.dir = +Object.keys(d.a[st.act])[0];
           st.fi = 0; drawActs(); draw();
-          $('#avNote').textContent = d.lv === 'lite' ? '용량 때문에 서기·걷기만 8방향, 다른 동작은 대각선 4방향' : d.lv === 'field' ? (id === p.img ? '용량 때문에 서기·걷기만 8방향, 다른 동작은 앞쪽 1방향' : '탑승은 서기·걷기 8방향') : '';
+          $('#avNote').textContent = d.lv === 'lite' ? '용량 때문에 서기·걷기만 8방향, 다른 동작은 대각선 4방향' : d.lv === 'field' ? '용량 때문에 서기·걷기만 8방향, 다른 동작은 앞쪽 1방향' : '';
         };
-        im.src = d.s;
+        im.src = (String(id).charAt(0) === 'r' ? RB(id) : '') + d.s;
       });
     }
     function setDir(d) { st.dir = (d + 8) % 8; st.fi = 0; drawActs(); draw(); }
@@ -963,10 +1048,11 @@
         [].forEach.call($('#avMode').children, function (x) { x.className = x === t ? 'on' : ''; });
         var ride = t.getAttribute('data-m') === 'ride';
         $('#avBody').hidden = !ride;
-        load(ride ? rr.a[$('#avBody').value] : p.img);
+        load(ride ? 'r' + rr.a[$('#avBody').value] : p.img);
       }
     });
-    if ($('#avBody')) $('#avBody').addEventListener('change', function () { load(rr.a[this.value]); });
+    if ($('#avBody')) $('#avBody').addEventListener('change', function () { load('r' + rr.a[this.value]); });
+    st.load = load;
     $('#avSpd').addEventListener('change', function () { st.spd = +this.value; });
     $('#avZ').addEventListener('change', function () { st.z = +this.value; draw(); });
     load(p.img);
@@ -989,9 +1075,21 @@
     var p = petById[id];
     if (!p) { app.innerHTML = '<p>펫을 찾지 못했습니다.</p>'; return; }
     var rr = rideById[p.id];
-    var h = '<p><a href="#/pets">← 펫 도감</a></p><div class="detail-head"><div class="detail-pic">' + petAnim(p, 260, true) + '</div>' + (rr && rr.gif ? '<div class="detail-pic"><img class="gif" src="' + rr.gif[0] + '" width="' + Math.round(rr.gif[1] * Math.min(2, 260 / rr.gif[1], 260 / rr.gif[2])) + '" alt="탑승"><div class="muted small">탑승 걷기</div></div>' : '') + '<div><h1>' + tierBadge(p.tier) + ' ' + esc(p.n) + '</h1><div>' + tags(p.c) + '<span class="tag">' + esc(p.fam) + '</span><span class="tag">' + esc(p.org) + '</span></div>' +
-      '<p><span class="id" style="font-size:22px">' + p.id + '</span> ' + copyBtn('[gm petmake ' + p.id + ' 1]') + ' ' + copyBtn('[gm petmake ' + p.id + ' 100]') + ' ' + copyBtn('[gm petmake ' + p.id + ' 300]') + '</p></div></div>';
-    h += '<div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(340px,1fr))"><div class="panel"><h3>능력치</h3>' + statBars(p.st, p.gr) + statTable(p) + '<div class="kv"><div>등급 점수</div><div>' + p.sc + ' (' + p.tier + '급) <a href="#/pets?tiers=1">기준</a></div><div>속성</div><div>' + (elemHtml(p.el) || '무') + '</div><div>기술</div><div>' + (p.sk.length ? p.sk.map(esc).join(', ') : '-') + '</div>' +
+    var wl = p.wild.filter(function (w) { return w.c; }).concat(p.wild.filter(function (w) { return !w.c; }));
+    var hx0 = wl.map(function (w) { return w.hid && huntById[w.hid]; }).filter(Boolean)[0];
+    var S = (p.roll || {}).s;
+    var h = '<p><a href="#/pets">← 펫 도감</a></p>' + hero({
+      el: EL_KO[domEl(p.el)], bg: hx0 && (hx0.scenes || [])[0] ? sceneBg(hx0.scenes[0].id) : '',
+      pic: petAnim(p, 240, true), title: esc(p.n) + ' <span class="id">' + p.id + '</span>',
+      tags: tags(p.c) + '<span class="tag">' + esc(p.fam) + '</span><span class="tag">' + esc(p.org) + '</span>',
+      facts: [['속성', elemHtml(p.el) || '무'], ['얻는 방법', esc(p.get.join(' · ')) + (p.mlv ? ' <span class="muted">· 야생 Lv.' + p.mlv + '~</span>' : '')],
+        ['출현', wl.slice(0, 2).map(function (w) { return (w.hid ? huntLink(w.hid) : esc(w.fn)) + ' <span class="muted small">Lv.' + w.lo + (w.hi !== w.lo ? '~' + w.hi : '') + (w.c ? '' : ' 포획 불가') + '</span>'; }).join('<br>')],
+        ['탑승', rr ? '<a class="hero-ride" href="#/ride/' + rr.id + '">' + (rr.gif ? '<img class="gif" loading="lazy" src="' + rr.gif[0] + '" height="' + Math.min(72, rr.gif[2]) + '" alt="">' : '') + ' 탈 수 있음 · 몸 ' + rr.r.length + '/12 ›</a>' : '<span class="muted">탈 수 없음</span>'],
+        ['기술', p.sk.length ? esc(p.sk.join(', ')) : '']],
+      cmds: copyBtn('[gm petmake ' + p.id + ' 1]') + ' ' + copyBtn('[gm petmake ' + p.id + ' 100]') + ' ' + copyBtn('[gm petmake ' + p.id + ' 300]'),
+      side: bigBadge(p.tier, TIERC[p.tier] || '#667085', p.sc, 'S급 Lv100 합') + (S ? '<div class="hero-mini small">Lv1 ' + r2(S.l1.reduce(function (a, b) { return a + b; }, 0)) + ' · 레벨당 +' + r2(S.g.reduce(function (a, b) { return a + b; }, 0)) + '</div>' : '') + elemBars(p.el) + '<a class="small" href="#/pets?tiers=1">등급 기준</a>'
+    });
+    h += '<div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(340px,1fr))"><div class="panel"><h3>능력치</h3>' + statBars(p) + statTable(p) + '<div class="kv"><div>등급 점수</div><div>S급 Lv100 합 ' + p.sc + ' (' + p.tier + '급) <a href="#/pets?tiers=1">기준</a></div><div>속성</div><div>' + (elemHtml(p.el) || '무') + '</div><div>기술</div><div>' + (p.sk.length ? p.sk.map(esc).join(', ') : '-') + '</div>' +
       '<div>종·그림</div><div>' + p.t + ' / ' + p.img + '</div>' + (p.nalt ? '<div>같은 펫 번호</div><div class="small">' + p.alt.join(', ') + (p.nalt > p.alt.length ? ' 외 ' + (p.nalt - p.alt.length) : '') + '</div>' : '') + '</div></div>';
     // 얻는 방법
     var ways = [];
@@ -1005,7 +1103,7 @@
     h += spotsHtml(p);
     var w0 = p.wild.filter(function (w) { return w.c && w.hid; })[0];
     if (w0) { var x = huntById[w0.hid]; if (x && x.mm) h += '<h2>잡으러 가는 곳: ' + esc(x.label) + '</h2>' + (x.route ? routeHtml(x.route, halfW(2)) : '') + '<div class="figs">' + (x.scenes || []).slice(0, 1).map(function (s) { return sceneHtml(s.id, s.marks.map(function (m, k) { return { x: m.x, y: m.y, k: m.k, t: m.t, n: k + 1 }; }), s.title, bigScale(2)); }).join('') + '</div>'; }
-    if (p.r.length) { var r = rideById[p.id]; h += '<h2>탑승 (' + p.r.length + '/12 몸)</h2><p class="muted small">펫 칸에 넣고 <code>[gm 펫탑승 칸번호]</code>. 몸 줄별 탑승 그림(첫 프레임).</p>' + (r ? rideGrid(r) : rows12(p.r)); }
+    if (p.r.length) { var r = rideById[p.id]; h += '<h2>탑승 (' + p.r.length + '/12 몸)</h2><p class="muted small">펫 칸에 넣고 <code>[gm 펫탑승 칸번호]</code>. ' + (r ? '<a href="#/ride/' + r.id + '">몸마다 움직임 보기 ›</a>' : '') + '</p>' + (r ? rideGrid(r) : rows12(p.r)); }
     if (p.sib.length) h += '<h2>같은 계열(색·변종)</h2><div class="grid cards">' + p.sib.map(function (i) { return petById[i]; }).filter(Boolean).map(petCard).join('') + '</div>';
     app.innerHTML = h;
     if (p.av) avInit(p, rr);
@@ -1075,8 +1173,17 @@
     var i = itemRep[id];
     if (!i) { app.innerHTML = '<p>아이템을 찾지 못했습니다.</p>'; return; }
     var s = i.s ? setBySuit[i.s] : null;
-    var h = '<p><a href="#/items">← 아이템 도감</a></p><div class="detail-head"><div class="detail-pic item-pic">' + itemImg(i.img, 160, 4) + '</div><div><h1>' + esc(i.n) + '</h1><p><span class="id" style="font-size:22px">' + i.id + '</span> ' +
-      copyBtn('[gm additem ' + i.id + ' 1]') + ' ' + copyBtn('[gm additem ' + i.id + ' 5]') + '</p><div>' + tags(i.k) + '</div></div></div>';
+    var hsrc = i.src.filter(function (x) { return x.hid; })[0] || (i.src[0] && i.src[0].t === 'tier' ? { hid: ((H.tierHunts || {})[i.src[0].tier] || [])[0] } : null);
+    var hx1 = hsrc && huntById[hsrc.hid];
+    var tl = i.t != null ? (i.t < 6 ? 'T' + (i.t + 1) : '화염') : (i.v80 ? '8.0' : (i.lv ? 'Lv' + i.lv : ''));
+    var h = '<p><a href="#/items">← 아이템 도감</a></p>' + hero({
+      el: i.t != null ? 'rare' + Math.min(5, i.t) : (i.s ? 'set' : 'item'), bg: hx1 && (hx1.scenes || [])[0] ? sceneBg(hx1.scenes[0].id) : '',
+      pic: '<div class="item-pic">' + itemImg(i.img, 170, 4) + '</div>', title: esc(i.n) + ' <span class="id">' + i.id + '</span>', tags: tags(i.k) + (i.v80 ? '<span class="tag v80">8.0 봉인해제</span>' : ''),
+      facts: [['종류', esc(i.tn) + ' · ' + esc(i.sub)], ['착용 Lv', i.lv ? String(i.lv) : ''], ['능력', esc(i.st || '')], ['세트', s ? esc(s.name) + ' <span class="muted small">(' + s.ids.length + '부위)</span>' : ''],
+        ['얻는 곳', i.src.length ? esc(srcShort(i.src[0])) + (i.src.length > 1 ? ' <span class="muted small">외 ' + (i.src.length - 1 + (i.more || 0)) + '</span>' : '') : 'GM 전용'], ['사냥터', hx1 ? huntLink(hsrc.hid) : '']],
+      cmds: copyBtn('[gm additem ' + i.id + ' 1]') + ' ' + copyBtn('[gm additem ' + i.id + ' 5]'),
+      side: tl ? bigBadge(tl, i.t != null ? (['#667085', '#2b8a3e', '#1971c2', '#7048e8', '#e8590c', '#c92a2a', '#c92a2a'][i.t] || '#667085') : '#475467', null, '') + '<div class="hero-mini small">' + (i.t != null ? '희귀 장비 등급' : i.v80 ? '8.0 아이템' : '착용 레벨') + '</div>' : ''
+    });
     h += '<div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(320px,1fr))"><div class="panel"><h3>정보</h3><div class="kv"><div>종류</div><div>' + esc(i.tn) + ' · ' + esc(i.sub) + (i.v80 ? ' <span class="tag v80">8.0 봉인해제</span>' : '') + '</div><div>착용 Lv</div><div>' + (i.lv || '-') + '</div><div>능력</div><div>' + esc(i.st || '-') + '</div><div>설명·효과</div><div>' + esc(i.ef || '-') + '</div>' +
       (i.same && i.same.length ? '<div>같은 아이템 번호</div><div class="small">' + i.same.join(', ') + '</div>' : '') + '</div></div>' +
       getSection(i.src, i.more, copyBtn('[gm additem ' + i.id + ' 1]')) + '</div>';
@@ -1119,31 +1226,139 @@
       '<div class="chips">' + STAGES.map(function (s, k) { return '<a class="chip" href="#/course?s=' + k + '">' + (k + 1) + '단계 Lv.' + s[0] + '~' + s[1] + '</a>'; }).join('') + '</div>' + STAGES.map(function (s, k) { return '<div id="st' + k + '">' + stageHtml(k) + '</div>'; }).join('');
   }
 
-  // ---------------------------------------------------------------- 탑승
-  var rState = { q: '', shown: 30 };
-  function pageRides() {
-    var h = '<h1>탑승 <span class="muted small">' + R.length + '종</span></h1><p class="muted">몸 12종(남 6 · 여 6)마다 탈 수 있는지와 탑승 그림(첫 프레임). <code>[gm 펫탑승 1~5]</code>로 그 칸 펫에 탑니다(0 = 내리기). 혼자 사냥 모드에서는 탑승 허가가 필요 없습니다.</p>';
-    h += '<div class="toolbar"><input type="search" id="rq" placeholder="이름·번호" value="' + esc(rState.q) + '"><span class="count" id="rn"></span></div><div id="rl"></div><button class="more" id="rm">더 보기</button>';
+  // ---------------------------------------------------------------- 마을 가는 법
+  var HOW_KO = { home: '시작 마을(샴기르 귀환 지점)', free: '보통 방법으로 갈 수 있음', cond: '조건 있는 워프로만', none: '보통 방법으로 못 감(GM 이동만)' };
+  var VIA_KO = { portal: '포탈', warp: '워프', air: '비행선', trans: '순간이동사', wman: '워프 NPC', cond: '조건 워프' };
+  function townHow(t) {
+    if (t.how === 'home') return '시작·귀환하는 마을';
+    if (t.how === 'none') return '<b class="bad">보통 방법으로 갈 수 없음</b> — GM 이동만';
+    var st = (t.steps || []).filter(function (x) { return x.k !== 'warp'; });
+    var nw = (t.steps || []).length - st.length;
+    return (t.how === 'cond' ? '<b class="warn">조건 필요</b> · ' : '') + (st.length ? st.map(function (x) { return (x.at ? '<span class="muted">' + esc(x.at) + '</span> ' : '') + esc(x.t); }).join(' → ') : '걸어서') + (nw ? ' <span class="muted">(+ 워프 ' + nw + '번)</span>' : '');
+  }
+  function townCard(t, i) {
+    var c = SC.s && SC.s[t.scene];
+    return '<div class="card town-card" data-go="#/town/' + i + '">' + (c ? '<div class="town-pic">' + sceneHtml(t.scene, [], '', 0.3) + '</div>' : '') + '<div class="idrow"><b>' + esc(t.name) + '</b><span class="tag ' + (t.how === 'none' ? 'boss' : t.how === 'cond' ? 'legend' : 'ride') + '">' + (t.how === 'none' ? '못 감' : t.how === 'cond' ? '조건' : t.how === 'home' ? '시작' : '갈 수 있음') + '</span></div>' +
+      '<div class="small">' + townHow(t) + '</div><div class="chips small">' + (t.npcs || []).slice(0, 6).map(function (n) { return '<span class="tag">' + esc(n.k) + '</span>'; }).filter(function (v, k, a) { return a.indexOf(v) === k; }).join('') + '</div>' +
+      '<div class="muted small">' + t.floor + ' (' + t.x + ',' + t.y + ') ' + warp(t.floor, t.x, t.y) + '</div></div>';
+  }
+  function pageTown(i) {
+    var t = (GD.towns || [])[i];
+    if (!t) { app.innerHTML = '<p>마을을 찾지 못했습니다.</p>'; return; }
+    var h = '<p><a href="#/start">← 시작하기</a></p>' + hero({ el: 'town', bg: t.scene != null ? sceneBg(t.scene) : '', pic: t.scene != null ? sceneHtml(t.scene, [{ x: t.x, y: t.y, k: 'arrive', t: t.name }], '', 0.34) : '', title: esc(t.name),
+      tags: '<span class="tag">' + esc(HOW_KO[t.how] || '') + '</span>', facts: [['가는 법', townHow(t)], ['맵', t.floor + ' (' + t.x + ',' + t.y + ')'], ['주요 NPC', (t.npcs || []).map(function (n) { return esc(n.k) + ' ' + esc(n.n); }).join(' · ')]],
+      cmds: warp(t.floor, t.x, t.y) });
+    if (t.route) h += '<h2>가는 길 (지도 경로)</h2><p class="muted small">샴기르 귀환 지점에서 출발. 층마다 걷는 길(노란 선), 보라 = 포탈·비행선·순간이동사·워프 NPC, S = 출발, G = 도착.</p>' + routeHtml(t.route, halfW(2));
+    else if (t.how === 'none') h += '<div class="panel"><p><b>보통 방법으로 갈 수 있는 길을 찾지 못했습니다.</b> 서버 자료(mapwarp·워프 NPC·고대 신전 포탈·비행선·순간이동사·워프맨)를 다 써도 이어지지 않습니다. GM 이동: ' + warp(t.floor, t.x, t.y) + '</p></div>';
+    if ((t.npcs || []).length) h += '<h2>주요 NPC</h2><div class="tbl-wrap"><table><tr><th>종류</th><th>이름</th><th>좌표</th><th></th></tr>' + t.npcs.map(function (n) { return '<tr><td>' + esc(n.k) + '</td><td>' + esc(n.n) + '</td><td>' + n.x + ',' + n.y + '</td><td>' + warp(t.floor, n.x, n.y + 1) + '</td></tr>'; }).join('') + '</table></div>';
     app.innerHTML = h;
-    function render() {
-      var q = rState.q.toLowerCase();
-      var l = R.filter(function (r) { return !q || r.n.toLowerCase().indexOf(q) >= 0 || String(r.id) === q; });
-      $('#rn').textContent = l.length + '종';
-      $('#rl').innerHTML = l.slice(0, rState.shown).map(function (r) {
-        return '<div class="panel"><div class="idrow"><span>' + petAnim(petById[r.id], 64) + (r.gif ? ' <img class="gif" loading="lazy" src="' + r.gif[0] + '" height="' + Math.min(96, r.gif[2]) + '" alt="탑승">' : '') + ' <span class="id">' + r.id + '</span> <a href="#/pet/' + r.id + '"><b>' + esc(r.n) + '</b></a> ' + (r.mech ? '<span class="tag mech">기계</span>' : '') + ' <span class="muted small">' + r.r.length + '/12</span></span>' + copyBtn('[gm petmake ' + r.id + ' 1]', 'petmake') + '</div>' + rideGrid(r) + '</div>';
-      }).join('');
-      $('#rm').hidden = l.length <= rState.shown;
+  }
+
+  // ---------------------------------------------------------------- 탑승
+  var rState = { q: '', shown: 48, body: '', org: '', tier: '', el: '', get: '', src: '', sort: 'id' };
+  var SRC_KO = { orig: '원작', v80: '8.0 이식', near: '8.0 이식(가까운 몸)', custom: '합성(커스텀)', synth: '합성(원본 모션)', color: '재채색', allrow: '전체 몸' };
+  var RIDE_ISSUE = { 100298: '탈 때 그림이 조금 흔들림(알려진 문제)', 100297: '탈 때 그림이 조금 흔들림(알려진 문제)' };
+  function rideSrcs(r) { return uniq(Object.keys(r.src || {}).map(function (k) { return r.src[k][0]; })); }
+  function rideCard(r) {
+    var p = petById[r.id] || {};
+    return '<div class="card ride-card" data-go="#/ride/' + r.id + '"><div class="pic">' + (r.gif ? '<img class="gif" loading="lazy" src="' + r.gif[0] + '" width="' + Math.round(r.gif[1] * Math.min(1.5, 120 / r.gif[1], 120 / r.gif[2])) + '" alt="">' : petAnim(p, 100)) + '<span class="ride-pet">' + petAnim(p, 44) + '</span></div>' +
+      '<div class="idrow"><span>' + (p.tier ? tierBadge(p.tier) : '') + ' <span class="id">' + r.id + '</span></span><span class="small">' + rows12(r.r) + ' ' + r.r.length + '/12</span></div>' +
+      '<div class="nm">' + esc(r.n) + '</div><div class="small">' + elemHtml(p.el) + '</div><div>' + rideSrcs(r).map(function (k) { return '<span class="tag ' + (k === 'orig' ? '' : k === 'synth' || k === 'custom' ? 'legend' : 'v80') + '">' + SRC_KO[k] + '</span>'; }).join('') + (r.mech ? '<span class="tag mech">기계</span>' : '') + '</div>' +
+      '<div class="muted small ellip">' + esc((p.get || []).join('·')) + (p.org ? ' · ' + esc(p.org) : '') + '</div></div>';
+  }
+  function pageRides() {
+    var orgs = uniq(R.map(function (r) { return (petById[r.id] || {}).org; })).sort();
+    var h = '<h1>탑승 도감 <span class="muted small">' + R.length + '종</span></h1><p class="muted">카드를 누르면 몸(캐릭터)마다 탄 모습을 동작·8방향으로 볼 수 있습니다. <code>[gm 펫탑승 1~5]</code>로 그 칸 펫에 탑니다(0 = 내리기). 혼자 사냥 모드에서는 탑승 허가가 필요 없습니다.</p>';
+    h += '<div class="toolbar"><input type="search" id="rq" placeholder="이름·번호" value="' + esc(rState.q) + '">' +
+      '<select id="rb">' + opts(BODY.map(function (b, k) { return [String(k), b]; }), rState.body, '몸 전체') + '</select>' +
+      '<select id="ro">' + opts(orgs, rState.org, '출신 전체') + '</select><select id="rt">' + opts(['S+', 'S', 'A', 'B', 'C', 'D'], rState.tier, '등급 전체') + '</select>' +
+      '<select id="re">' + opts([['지', '지'], ['수', '수'], ['화', '화'], ['풍', '풍']], rState.el, '속성 전체') + '</select><select id="rg">' + opts(['야생', '보스', '퀘스트', 'GM 전용'], rState.get, '얻는 방법 전체') + '</select>' +
+      '<select id="rs2">' + opts(Object.keys(SRC_KO).map(function (k) { return [k, SRC_KO[k]]; }), rState.src, '그림 출처 전체') + '</select>' +
+      '<select id="rso">' + opts([['id', '번호순'], ['name', '이름순'], ['sc', '등급 점수'], ['n', '탈 수 있는 몸 수']], rState.sort, '정렬') + '</select><span class="count" id="rn"></span></div><div class="grid cards" id="rl"></div><button class="more" id="rm">더 보기</button>';
+    app.innerHTML = h;
+    function list() {
+      var q = rState.q.toLowerCase().trim();
+      var l = R.filter(function (r) {
+        var p = petById[r.id] || {};
+        if (q && r.n.toLowerCase().indexOf(q) < 0 && String(r.id) !== q) return false;
+        if (rState.body !== '' && r.r.indexOf(+rState.body) < 0) return false;
+        if (rState.org && p.org !== rState.org) return false;
+        if (rState.tier && p.tier !== rState.tier) return false;
+        if (rState.el && (p.el || '').indexOf(rState.el) < 0) return false;
+        if (rState.get && (p.get || []).indexOf(rState.get) < 0) return false;
+        if (rState.src && rideSrcs(r).indexOf(rState.src) < 0) return false;
+        return true;
+      });
+      var sc = function (r) { return (petById[r.id] || {}).sc || 0; };
+      if (rState.sort === 'name') l.sort(function (a, b) { return a.n.localeCompare(b.n, 'ko'); });
+      else if (rState.sort === 'sc') l.sort(function (a, b) { return sc(b) - sc(a) || a.id - b.id; });
+      else if (rState.sort === 'n') l.sort(function (a, b) { return b.r.length - a.r.length || a.id - b.id; });
+      return l;
     }
-    $('#rq').addEventListener('input', function () { rState.q = this.value; rState.shown = 30; render(); });
-    $('#rm').addEventListener('click', function () { rState.shown += 40; render(); });
+    function render() { var l = list(); $('#rn').textContent = l.length + '종'; $('#rl').innerHTML = l.slice(0, rState.shown).map(rideCard).join(''); $('#rm').hidden = l.length <= rState.shown; }
+    $('#rq').addEventListener('input', function () { rState.q = this.value; rState.shown = 48; render(); });
+    [['#rb', 'body'], ['#ro', 'org'], ['#rt', 'tier'], ['#re', 'el'], ['#rg', 'get'], ['#rs2', 'src'], ['#rso', 'sort']].forEach(function (x) { $(x[0]).addEventListener('change', function () { rState[x[1]] = this.value; rState.shown = 48; render(); }); });
+    $('#rm').addEventListener('click', function () { rState.shown += 48; render(); });
     autoMore('#rm'); render();
+  }
+  function pageRide(id) {
+    var r = rideById[id];
+    if (!r) { app.innerHTML = '<p>탑승을 찾지 못했습니다. <a href="#/rides">목록</a></p>'; return; }
+    var p = petById[r.id] || {}, keys = Object.keys(r.a).sort(function (a, b) { return a - b; }), cur = r.rep != null && r.a[r.rep] ? String(r.rep) : keys[0];
+    var wl = (p.wild || []).filter(function (w) { return w.c; }), hx0 = wl.map(function (w) { return w.hid && huntById[w.hid]; }).filter(Boolean)[0];
+    var h = '<p><a href="#/rides">← 탑승 도감</a></p>' + hero({
+      el: EL_KO[domEl(p.el)], bg: hx0 && (hx0.scenes || [])[0] ? sceneBg(hx0.scenes[0].id) : '',
+      pic: r.gif ? '<img class="gif" src="' + r.gif[0] + '" width="' + Math.round(r.gif[1] * Math.min(2.5, 240 / r.gif[1], 240 / r.gif[2])) + '" alt="">' : petAnim(p, 200, true), title: esc(r.n) + ' <span class="id">' + r.id + '</span>',
+      tags: rideSrcs(r).map(function (k) { return '<span class="tag">' + SRC_KO[k] + '</span>'; }).join('') + (r.mech ? '<span class="tag mech">기계</span>' : '') + (p.org ? '<span class="tag">' + esc(p.org) + '</span>' : ''),
+      facts: [['펫', petLink(r.id) + (p.tier ? ' ' + tierBadge(p.tier) + ' <span class="muted small">S급 Lv100 ' + p.sc + '</span>' : '')], ['속성', elemHtml(p.el)], ['탈 수 있는 몸', rows12(r.r) + ' ' + r.r.length + '/12'],
+        ['얻는 방법', esc((p.get || []).join(' · ')) + (wl[0] ? ' · ' + (wl[0].hid ? huntLink(wl[0].hid) : esc(wl[0].fn)) + ' <span class="muted small">Lv.' + wl[0].lo + '~</span>' : '')],
+        ['알려진 문제', RIDE_ISSUE[r.img] ? esc(RIDE_ISSUE[r.img]) : '']],
+      cmds: copyBtn('[gm petmake ' + r.id + ' 1]') + ' ' + copyBtn('[gm 펫탑승 1]'),
+      side: p.tier ? bigBadge(p.tier, TIERC[p.tier] || '#667085', p.sc, 'S급 Lv100 합') + elemBars(p.el) : ''
+    });
+    h += '<div class="panel"><h3>몸(캐릭터) 고르기 <span class="muted small">눌러서 아래 움직임 보기를 바꿉니다</span></h3><div class="ride-grid pick" id="rbody">';
+    for (var i = 0; i < 12; i++) {
+      var a = r.a[String(i)], ok = r.r.indexOf(i) >= 0, sr = (r.src || {})[String(i)];
+      h += '<button class="ride-cell' + (ok && a ? '' : ' no') + (String(i) === cur ? ' on' : '') + '" data-b="' + i + '"' + (ok && a ? '' : ' disabled') + '>' + (ok && a ? spr('rd', 'a' + a, 84) : '<span class="small">' + (ok ? '가능' : '불가') + '</span>') + '<span>' + esc(BODY[i] || i) + '</span>' + (sr && sr[0] !== 'orig' ? '<em class="small">' + esc(SRC_KO[sr[0]] || sr[0]) + '</em>' : '') + '</button>';
+    }
+    h += '</div><p class="muted small">몸 줄 = 서버 탑승표 순서(남 꼬마·사이야·땋은 머리·멋쟁이·곰가죽·덩치 / 여 꼬마·곰가죽·모자·머리핀·장갑·화끈). 8.0 새 몸·한국판 몸은 서버 탑승표에 줄이 없어 나오지 않습니다.</p></div>';
+    h += '<div class="panel av" id="av"><div class="av-head"><h3>움직임 보기</h3><span class="small muted" id="rbName"></span></div><div class="av-main"><div class="av-stage"><canvas id="avCv" width="10" height="10"></canvas><div class="av-info small muted" id="avInfo">불러오는 중…</div><div class="small muted" id="avNote"></div></div>' +
+      '<div class="av-ctl"><div class="av-acts" id="avActs"></div><div class="av-row"><div class="av-pad" id="avPad">' + PAD.map(function (d) { return d < 0 ? '<button data-rot="1" title="돌리기">⟳</button>' : '<button data-d="' + d + '" title="' + DIR_KO[d] + '">' + DIR_ARROW[d] + '</button>'; }).join('') + '</div>' +
+      '<div class="av-btns"><div><button data-r="-1">◀ 돌리기</button><button data-r="1">돌리기 ▶</button></div><div><button id="avPlay">⏸ 멈춤</button><button data-st="-1">⏮</button><button data-st="1">⏭</button></div>' +
+      '<div><label class="small">속도 <select id="avSpd"><option value="0.25">0.25x</option><option value="0.5">0.5x</option><option value="1" selected>1x</option><option value="2">2x</option></select></label> <label class="small">크기 <select id="avZ"><option value="1">1x</option><option value="2" selected>2x</option><option value="3">3x</option></select></label></div></div></div>' +
+      '<div class="muted small">키보드: ←/→ 방향 · ↑/↓ 동작 · 스페이스 재생/멈춤 · , . 한 프레임씩</div></div></div></div>';
+    var notes = keys.map(function (k) { var sr = (r.src || {})[k]; return sr && (sr[0] === 'synth' || sr[0] === 'color' || sr[0] === 'custom' || sr[0] === 'near') ? '<li>' + esc(BODY[k] || k) + ': ' + esc(SRC_KO[sr[0]]) + (sr[1] ? ' — 원본 모션 기증 ' + sr[1] : '') + ' <span class="muted small">(그림 ' + r.a[k] + ')</span></li>' : ''; }).join('');
+    h += '<div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(320px,1fr))"><div class="panel"><h3>탑승 그림 메모</h3>' + (notes ? '<ul class="small">' + notes + '</ul>' : '<p class="small">모든 몸 줄이 원작(또는 8.0 원본) 탑승 그림입니다.</p>') + (RIDE_ISSUE[r.img] ? '<p class="small warn">' + esc(RIDE_ISSUE[r.img]) + '</p>' : '') + '<p class="muted small">출처: gmsv char/char_base.c ridePetTable·RideNoList, include/bada_ride_ext.h, include/bada_ride_allrow.h</p></div>' +
+      '<div class="panel"><h3>얻는 방법</h3>' + ((p.q || []).length ? '<ol class="srcs">' + p.q.map(function (s) { return '<li>' + srcHtml(s) + '</li>'; }).join('') + '</ol>' : '') + (wl.length ? '<p class="small">야생: ' + wl.slice(0, 4).map(function (w) { return (w.hid ? huntLink(w.hid) : esc(w.fn)) + ' Lv.' + w.lo; }).join(' · ') + '</p>' : '') +
+      '<p class="small">GM: ' + copyBtn('[gm petmake ' + r.id + ' 1]') + ' 펫 칸에 넣고 ' + copyBtn('[gm 펫탑승 1]') + '</p><p class="small"><a href="#/pet/' + r.id + '">펫 정보(S급 능력치·출현) 보기 ›</a></p></div></div>';
+    app.innerHTML = h;
+    avInit({ img: 'r' + r.a[cur], n: r.n }, null);
+    function setBody(k) {
+      [].forEach.call($('#rbody').children, function (b) { b.classList.toggle('on', b.getAttribute('data-b') === k); });
+      $('#rbName').textContent = (BODY[k] || k) + ' 몸 · 그림 ' + r.a[k] + ' · ' + ({ full: '모든 동작 8방향', lite: '서기·걷기 8방향 + 다른 동작 4방향', field: '서기·걷기 8방향 + 다른 동작 1방향' }[(r.av || {})[k]] || '');
+      if (AV && AV.load) AV.load('r' + r.a[k]);
+    }
+    $('#rbody').addEventListener('click', function (e) { var b = e.target.closest('[data-b]'); if (b && !b.disabled) setBody(b.getAttribute('data-b')); });
+    setBody(cur);
   }
 
   // ---------------------------------------------------------------- 업데이트
+  var ST_KO = { live: ['라이브 적용', 'ride'], '14': ['14차 준비(미배포)', 'v80'], '15': ['15차 예정', 'legend'] };
+  function stTag(st) { var x = ST_KO[st]; return x ? '<span class="tag ' + x[1] + '">' + x[0] + '</span>' : ''; }
   function pageUpdates() {
-    app.innerHTML = '<h1>업데이트 기록</h1><p class="muted">CHANGELOG.md 최신순 ' + LOG.length + '개' + ((M.counts || {}).changelog > LOG.length ? ' (전체 ' + M.counts.changelog + ')' : '') + '</p>' + LOG.map(function (e, k) {
-      return '<details class="panel"' + (k < 3 ? ' open' : '') + '><summary>' + esc(e.date) + ' · ' + esc(e.title) + '</summary>' + md(e.body) + '</details>';
+    var V = M.version || {}, NX = M.next_round || { items: [] }, CM = M.commits || [];
+    var h = '<h1>업데이트 기록</h1><p class="muted">CHANGELOG.md 최신순 ' + LOG.length + '개' + ((M.counts || {}).changelog > LOG.length ? ' (전체 ' + M.counts.changelog + ')' : '') + ' · 저장소 ' + esc(V.head || '') + '</p>';
+    h += '<div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(300px,1fr))">' +
+      '<div class="panel"><h3>' + stTag('live') + ' 지금 라이브: ' + (V.live || '?') + '차</h3><p class="small">집 PC 바다 서버에 적용된 판. 아래 “라이브 적용” 표시 항목까지 들어 있습니다.</p></div>' +
+      '<div class="panel"><h3>' + stTag('14') + ' 14차 준비 — 서버·클라 준비 끝, 배포 전</h3><ul class="small">' +
+      ['샴기르 고대 신전(64000) 워프 허브 · 흩어진 포탈 정리 · 가미 항공 한국어', '라온 펫 333종 · 라온 탑승 35줄', '한국판(원작) 캐릭터 · 엘크 원본 탑승', '탑승 정비(전체 몸 줄 allrow·재채색·phoenix)', '클라이언트 그림 용량 real64(4 GiB → 약 20 GiB)',
+        '사냥터 간호사 · 던전 회복약·마석 드롭 · 경험치 곡선 · 펫 Lv300', '8.0 봉인해제 1·2단계(층 185 · 아이템 2,254 · 세트 25)', '페이지 거부 즉시 되돌림 · 지도 노란 칸(커서) 숨김', '결과창 펫 줄 · 오토 멈춤 · 일괄 기본 켬 · 다른 페이지 펫 회복'].map(function (t) { return '<li>' + esc(t) + '</li>'; }).join('') + '</ul></div>' +
+      '<div class="panel"><h3>' + stTag('15') + ' 다음 업데이트 예정(' + NX.no + '차)</h3><ul class="small">' + NX.items.map(function (x) { return '<li><b>' + esc(x[0]) + '</b> — ' + esc(x[1]) + '</li>'; }).join('') + '</ul></div></div>';
+    if (CM.length) h += '<details class="panel"><summary>최근 저장소 커밋 ' + CM.length + '개</summary><ul class="small">' + CM.map(function (c) { return '<li>' + stTag(c.st) + ' <code>' + esc(c.h) + '</code> ' + esc(c.date) + ' · ' + esc(c.msg) + '</li>'; }).join('') + '</ul></details>';
+    h += LOG.map(function (e, k) {
+      return '<details class="panel"' + (k < 3 ? ' open' : '') + '><summary>' + stTag(e.st) + ' ' + esc(e.date) + ' · ' + esc(e.title) + '</summary>' + md(e.body) + '</details>';
     }).join('');
+    app.innerHTML = h;
   }
 
   // ---------------------------------------------------------------- 검색
@@ -1203,12 +1418,12 @@
     var hs = location.hash.replace(/^#\/?/, ''), qi = hs.indexOf('?'), path = qi >= 0 ? hs.slice(0, qi) : hs, params = {};
     if (qi >= 0) hs.slice(qi + 1).split('&').forEach(function (kv) { var p = kv.split('='); params[decodeURIComponent(p[0])] = decodeURIComponent(p[1] || ''); });
     var parts = path.split('/'), r = parts[0] || 'home';
-    FIGS.length = 0; $('#modal').hidden = true;
-    [].forEach.call(document.querySelectorAll('.side a'), function (a) { var d = a.getAttribute('data-r'); a.classList.toggle('on', d === r || (d + '') === ({ hunt: 'hunts', pet: 'pets', item: 'items' })[r]); });
+    FIGS.length = 0; NPCS.length = 0; $('#modal').hidden = true; avStop();
+    [].forEach.call(document.querySelectorAll('.side a'), function (a) { var d = a.getAttribute('data-r'); a.classList.toggle('on', d === r || (d + '') === ({ hunt: 'hunts', pet: 'pets', item: 'items', ride: 'rides', town: 'start' })[r]); });
     try {
       if (r === 'home') pageHome(); else if (r === 'start') pageStart(); else if (r === 'hunts') pageHunts(params); else if (r === 'hunt') pageHunt(parts[1]);
       else if (r === 'quests' && parts[1]) pageQuest(decodeURIComponent(parts[1])); else if (r === 'quests') pageQuests(params); else if (r === 'pets') pagePets(params); else if (r === 'pet') pagePet(+parts[1]);
-      else if (r === 'items') pageItems(params); else if (r === 'item') pageItem(+parts[1]); else if (r === 'rides') pageRides(); else if (r === 'course') { pageCourse(); if (params.s) { var se = document.getElementById('st' + params.s); if (se) setTimeout(function () { se.scrollIntoView(); }, 0); } } else if (r === 'updates') pageUpdates(); else pageHome();
+      else if (r === 'items') pageItems(params); else if (r === 'item') pageItem(+parts[1]); else if (r === 'rides') pageRides(); else if (r === 'ride') pageRide(+parts[1]); else if (r === 'town') pageTown(+parts[1]); else if (r === 'course') { pageCourse(); if (params.s) { var se = document.getElementById('st' + params.s); if (se) setTimeout(function () { se.scrollIntoView(); }, 0); } } else if (r === 'updates') pageUpdates(); else pageHome();
     } catch (err) { app.innerHTML = '<p class="pad">화면을 그리다 오류: ' + esc(err && err.message) + '</p>'; if (window.console) console.error(err); }
     var key = location.hash;
     window.scrollTo(0, scrolls[key] || 0);

@@ -843,10 +843,16 @@
   var pState = { cat: '', tier: '', fam: '', el: '', get: '', org: '', band: '', q: '', sort: 'id', shown: 120 };
   var PCATS = ['탑승', '전설', '기계', '거대', '신규', '8.0', '원작', '보스'];
   var TIERC = { 'S+': '#c2255c', S: '#d9480f', A: '#b26b00', B: '#2457c5', C: '#2b8a3e', D: '#667085' };
+  function nameNote(x, small) {
+    var s = '';
+    if (x.gn) s += ' <span class="tag nm15" title="게임 안에서는 아직 「' + esc(x.gn) + '」 — 15차에 공식 이름으로 바뀔 예정">15차 이름 예정</span>' + (small ? '' : '<div class="small muted">게임 안 이름(14차): ' + esc(x.gn) + '</div>');
+    else if (x.an && !small) s += '<div class="small muted">공식 이름 후보(검토 중): ' + esc(x.an) + '</div>';
+    return s;
+  }
   function tierBadge(t) { return '<span class="tier" style="background:' + (TIERC[t] || '#667085') + '">' + t + '</span>'; }
   function petCard(p) {
     return '<div class="card pet-card" data-go="#/pet/' + p.id + '"><div class="pic">' + petAnim(p, 100) + '</div><div class="idrow"><span>' + tierBadge(p.tier) + ' <span class="id">' + p.id + '</span></span>' + copyBtn('[gm petmake ' + p.id + ' 1]', 'petmake') + '</div>' +
-      '<div class="nm" title="' + esc(p.n) + '">' + esc(p.n) + '</div><div>' + tags(p.c) + '<span class="tag">' + esc(p.fam) + '</span></div><div class="idrow small"><span>' + elemHtml(p.el) + '</span>' + (p.r.length ? rows12(p.r) : '') + '</div>' +
+      '<div class="nm" title="' + esc(p.n) + '">' + esc(p.n) + nameNote(p, true) + '</div>' + (p.gn ? '<div class="small muted">게임: ' + esc(p.gn) + '</div>' : '') + '<div>' + tags(p.c) + '<span class="tag">' + esc(p.fam) + '</span></div><div class="idrow small"><span>' + elemHtml(p.el) + '</span>' + (p.r.length ? rows12(p.r) : '') + '</div>' +
       '<div class="muted small ellip">' + esc(p.get.join('·')) + (p.mlv ? ' · Lv.' + p.mlv + '~' : '') + ' · S급 Lv100 ' + p.sc + '</div></div>';
   }
   function opts(list, cur, all) { return '<option value="">' + all + '</option>' + list.map(function (x) { var v = Array.isArray(x) ? x[0] : x, l = Array.isArray(x) ? x[1] : x; return '<option value="' + esc(v) + '"' + (String(cur) === String(v) ? ' selected' : '') + '>' + esc(l) + '</option>'; }).join(''); }
@@ -877,7 +883,7 @@
         if (pState.get && p.get.indexOf(pState.get) < 0) return false;
         if (pState.org && p.org !== pState.org) return false;
         if (pState.band && band(p) !== pState.band) return false;
-        if (q && ((p.n + ' ' + p.sk.join(' ')).toLowerCase().indexOf(q) < 0 && String(p.id) !== q && (p.alt || []).indexOf(+q) < 0)) return false;
+        if (q && ((p.n + ' ' + (p.gn || '') + ' ' + (p.an || '') + ' ' + p.sk.join(' ')).toLowerCase().indexOf(q) < 0 && String(p.id) !== q && (p.alt || []).indexOf(+q) < 0)) return false;
         return true;
       });
       var k = { hp: 0, atk: 1, def: 2, spd: 3 }[pState.sort], sum = function (p) { return p.st[0] + p.st[1] + p.st[2] + p.st[3]; };
@@ -1087,7 +1093,7 @@
     var S = (p.roll || {}).s;
     var h = '<p><a href="#/pets">← 펫 도감</a></p>' + hero({
       el: EL_KO[domEl(p.el)], bg: hx0 && (hx0.scenes || [])[0] ? sceneBg(hx0.scenes[0].id) : '',
-      pic: petAnim(p, 240, true), title: esc(p.n) + ' <span class="id">' + p.id + '</span>',
+      pic: petAnim(p, 240, true), title: esc(p.n) + ' <span class="id">' + p.id + '</span>', sub: nameNote(p),
       tags: tags(p.c) + '<span class="tag">' + esc(p.fam) + '</span><span class="tag">' + esc(p.org) + '</span>',
       facts: [['속성', elemHtml(p.el) || '무'], ['얻는 방법', esc(p.get.join(' · ')) + (p.mlv ? ' <span class="muted">· 야생 Lv.' + p.mlv + '~</span>' : '')],
         ['출현', wl.slice(0, 3).map(function (w) { return (w.hid ? huntLink(w.hid) : esc(w.fn)) + ' <span class="muted small">Lv.' + w.lo + (w.hi !== w.lo ? '~' + w.hi : '') + (w.c ? '' : ' 포획 불가') + '</span>'; }).join('<br>')],
@@ -1122,7 +1128,7 @@
   var iState = { g: '', sub: '', tier: '', src: '', v80: false, set: false, q: '', band: '', sort: 'id', shown: 120, tab: 'items' };
   function itemCard(i) {
     return '<div class="card icard" data-go="#/item/' + i.id + '"><div class="ic">' + itemImg(i.img, 80, 3) + '</div><div class="qbody"><div class="idrow"><span class="id">' + i.id + '</span>' + copyBtn('[gm additem ' + i.id + ' 1]', 'additem') + '</div>' +
-      '<b class="ellip" title="' + esc(i.n) + '">' + esc(i.n) + '</b><div class="small ellip">' + esc(i.sub) + (i.lv ? ' · Lv' + i.lv : '') + (i.st ? ' · ' + esc(i.st) : '') + '</div>' +
+      '<b class="ellip" title="' + esc(i.n) + '">' + esc(i.n) + '</b>' + nameNote(i, true) + (i.gn ? '<div class="small muted ellip">게임: ' + esc(i.gn) + '</div>' : '') + '<div class="small ellip">' + esc(i.sub) + (i.lv ? ' · Lv' + i.lv : '') + (i.st ? ' · ' + esc(i.st) : '') + '</div>' +
       '<div>' + (i.v80 ? '<span class="tag v80">8.0</span>' : '') + (i.s ? '<span class="tag legend">세트</span>' : '') + (i.t != null ? '<span class="tag">' + (i.t < 6 ? 'T' + (i.t + 1) : '화염') + '</span>' : '') + '</div>' +
       '<div class="muted small ellip">' + esc(i.src.length ? srcShort(i.src[0]) + (i.src.length > 1 ? ' 외 ' + (i.src.length - 1 + (i.more || 0)) : '') : 'GM 전용') + '</div></div></div>';
   }
@@ -1160,7 +1166,7 @@
         if (iState.v80 && !i.v80) return false;
         if (iState.set && !i.s) return false;
         if (iState.band && band(i.lv) !== iState.band) return false;
-        if (q && (i.n + ' ' + i.st + ' ' + i.ef + ' ' + i.sub).toLowerCase().indexOf(q) < 0 && String(i.id) !== q && (i.same || []).indexOf(+q) < 0) return false;
+        if (q && (i.n + ' ' + (i.gn || '') + ' ' + (i.an || '') + ' ' + i.st + ' ' + i.ef + ' ' + i.sub).toLowerCase().indexOf(q) < 0 && String(i.id) !== q && (i.same || []).indexOf(+q) < 0) return false;
         return true;
       });
       if (iState.sort === 'lv') l.sort(function (a, b) { return a.lv - b.lv || a.id - b.id; });
@@ -1185,7 +1191,7 @@
     var tl = i.t != null ? (i.t < 6 ? 'T' + (i.t + 1) : '화염') : (i.v80 ? '8.0' : (i.lv ? 'Lv' + i.lv : ''));
     var h = '<p><a href="#/items">← 아이템 도감</a></p>' + hero({
       el: i.t != null ? 'rare' + Math.min(5, i.t) : (i.s ? 'set' : 'item'), bg: hx1 && (hx1.scenes || [])[0] ? sceneBg(hx1.scenes[0].id) : '',
-      pic: '<div class="item-pic">' + itemImg(i.img, 170, 4) + '</div>', title: esc(i.n) + ' <span class="id">' + i.id + '</span>', tags: tags(i.k) + (i.v80 ? '<span class="tag v80">8.0 봉인해제</span>' : ''),
+      pic: '<div class="item-pic">' + itemImg(i.img, 170, 4) + '</div>', title: esc(i.n) + ' <span class="id">' + i.id + '</span>', sub: nameNote(i), tags: tags(i.k) + (i.v80 ? '<span class="tag v80">8.0 봉인해제</span>' : ''),
       facts: [['종류', esc(i.tn) + ' · ' + esc(i.sub)], ['착용 Lv', i.lv ? String(i.lv) : ''], ['능력', esc(i.st || '')], ['세트', s ? esc(s.name) + ' <span class="muted small">(' + s.ids.length + '부위)</span>' : ''],
         ['얻는 곳', i.src.length ? esc(srcShort(i.src[0])) + (i.src.length > 1 ? ' <span class="muted small">외 ' + (i.src.length - 1 + (i.more || 0)) + '</span>' : '') : 'GM 전용'], ['사냥터', hx1 ? huntLink(hsrc.hid) : '']],
       cmds: copyBtn('[gm additem ' + i.id + ' 1]') + ' ' + copyBtn('[gm additem ' + i.id + ' 5]'),
@@ -1357,8 +1363,8 @@
     var h = '<h1>업데이트 기록</h1><p class="muted">CHANGELOG.md 최신순 ' + LOG.length + '개' + ((M.counts || {}).changelog > LOG.length ? ' (전체 ' + M.counts.changelog + ')' : '') + ' · 저장소 ' + esc(V.head || '') + '</p>';
     h += '<div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(300px,1fr))">' +
       '<div class="panel"><h3>' + stTag('live') + ' 지금 라이브: ' + (V.live || '?') + '차</h3><p class="small">집 PC 바다 서버에 적용된 판. 아래 “라이브 적용” 표시 항목까지 들어 있습니다.</p></div>' +
-      '<div class="panel"><h3>' + stTag('14') + ' 14차 준비 — 서버·클라 준비 끝, 배포 전</h3><ul class="small">' +
-      ['샴기르 고대 신전(64000) 워프 허브 · 흩어진 포탈 정리 · 가미 항공 한국어', '라온 펫 333종 · 라온 탑승 35줄', '한국판(원작) 캐릭터 · 엘크 원본 탑승', '탑승 정비(전체 몸 줄 allrow·재채색·phoenix)', '클라이언트 그림 용량 real64(4 GiB → 약 20 GiB)',
+      '<div class="panel"><h3>' + ((V.live || 0) >= 14 ? stTag('live') + ' 14차 라이브 — 2026-11-14 배포 (GMSV d5564836 · 클라 runtime-ko-11th)' : stTag('14') + ' 14차 준비 — 서버·클라 준비 끝, 배포 전') + '</h3><ul class="small">' +
+      ['접속기: 창 모드 / 선명 전체화면 선택(설정 저장), 게임 창에서 Alt+Enter·F11 전환', '8.0 층 519개 서버 읽기 수정 · 가미 항공·GM 문구 한국어', '샴기르 고대 신전(64000) 워프 허브 · 흩어진 포탈 정리 · 가미 항공 한국어', '라온 펫 333종 · 라온 탑승 35줄', '한국판(원작) 캐릭터 · 엘크 원본 탑승', '탑승 정비(전체 몸 줄 allrow·재채색·phoenix)', '클라이언트 그림 용량 real64(4 GiB → 약 20 GiB)',
         '사냥터 간호사 · 던전 회복약·마석 드롭 · 경험치 곡선 · 펫 Lv300', '8.0 봉인해제 1·2단계(층 185 · 아이템 2,254 · 세트 25)', '페이지 거부 즉시 되돌림 · 지도 노란 칸(커서) 숨김', '결과창 펫 줄 · 오토 멈춤 · 일괄 기본 켬 · 다른 페이지 펫 회복'].map(function (t) { return '<li>' + esc(t) + '</li>'; }).join('') + '</ul></div>' +
       '<div class="panel"><h3>' + stTag('15') + ' 다음 업데이트 예정(' + NX.no + '차)</h3><ul class="small">' + NX.items.map(function (x) { return '<li><b>' + esc(x[0]) + '</b> — ' + esc(x[1]) + '</li>'; }).join('') + '</ul></div></div>';
     if (CM.length) h += '<details class="panel"><summary>최근 저장소 커밋 ' + CM.length + '개</summary><ul class="small">' + CM.map(function (c) { return '<li>' + stTag(c.st) + ' <code>' + esc(c.h) + '</code> ' + esc(c.date) + ' · ' + esc(c.msg) + '</li>'; }).join('') + '</ul></details>';
@@ -1372,8 +1378,8 @@
   var IDX = null;
   function buildIndex() {
     IDX = [];
-    P.forEach(function (p) { IDX.push({ k: '펫', t: p.n, s: p.id + ' · ' + p.c.join(' '), h: '#/pet/' + p.id, id: p.id, alt: p.alt, img: ['cr', 'a' + p.img], x: (p.n + ' ' + p.id).toLowerCase() }); });
-    IT.forEach(function (i) { IDX.push({ k: '아이템', t: i.n, s: i.id + ' · ' + i.tn + (i.lv ? ' Lv' + i.lv : ''), h: '#/item/' + i.id, id: i.id, alt: i.same, img: ['ic', 'i' + i.img], x: (i.n + ' ' + i.id).toLowerCase() }); });
+    P.forEach(function (p) { IDX.push({ k: '펫', t: p.n, s: p.id + ' · ' + p.c.join(' '), h: '#/pet/' + p.id, id: p.id, alt: p.alt, img: ['cr', 'a' + p.img], x: (p.n + ' ' + (p.gn || '') + ' ' + (p.an || '') + ' ' + p.id).toLowerCase() }); });
+    IT.forEach(function (i) { IDX.push({ k: '아이템', t: i.n, s: i.id + ' · ' + i.tn + (i.lv ? ' Lv' + i.lv : ''), h: '#/item/' + i.id, id: i.id, alt: i.same, img: ['ic', 'i' + i.img], x: (i.n + ' ' + (i.gn || '') + ' ' + (i.an || '') + ' ' + i.id).toLowerCase() }); });
     H.hunts.forEach(function (x) { IDX.push({ k: '사냥터', t: x.label, s: x.catname + ' · Lv.' + x.lo + '~' + x.hi, h: '#/hunt/' + x.id, x: (x.label + ' ' + x.area + ' ' + x.floors.map(function (f) { return f.n + ' ' + f.f; }).join(' ')).toLowerCase() }); });
     Q.quests.forEach(function (q) { IDX.push({ k: '퀘스트', t: q.title, s: '#' + q.no + ' · ' + q.region, h: '#/quests/' + q.no, x: (q.title + ' ' + q.region + ' ' + q.no).toLowerCase() }); });
     GUIDES.forEach(function (g) { IDX.push({ k: '가이드', t: g.title, s: g.region, h: '#/quests/' + g.no, x: (g.title + ' ' + g.region).toLowerCase() }); });

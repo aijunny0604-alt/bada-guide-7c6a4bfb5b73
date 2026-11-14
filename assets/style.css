@@ -291,3 +291,4 @@ input,textarea,[contenteditable="true"]{cursor:url(fish-cursor.png) 1 1,text !im
 .col-stack .av-main{flex-direction:column}.col-stack .av-stage,.col-stack .av-ctl{flex:1 1 auto}
 .route-grid{display:flex;flex-wrap:wrap;gap:6px 22px;align-items:flex-start}.route-grid>div{min-width:0}
 .hunt-bottom{grid-template-columns:repeat(auto-fit,minmax(300px,1fr));align-items:start;margin-top:14px}.hunt-bottom .panel{margin:0}
+.tag.nm15{background:#fff4e5;color:#b25e00;border:1px solid #f5c07a;font-size:10.5px;vertical-align:middle}:root[data-theme="dark"] .tag.nm15{background:#3a2a12!important;color:#ffc46b}

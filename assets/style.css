@@ -140,7 +140,7 @@ details.panel>summary{cursor:pointer;font-weight:600;list-style:none} details.pa
 .tier{display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:5px;color:#fff;font:700 12px Consolas,monospace;vertical-align:middle}
 .icards{grid-template-columns:repeat(auto-fill,minmax(250px,1fr))}
 .icard{display:flex;gap:10px;align-items:flex-start}
-.icard .ic{width:52px;height:52px;flex:none;display:flex;align-items:center;justify-content:center;background:var(--panel2);border-radius:8px}
+.icard .ic{width:88px;height:88px;flex:none;display:flex;align-items:center;justify-content:center;background:var(--panel2);border-radius:8px}
 .bars{display:flex;flex-direction:column;gap:5px;margin:6px 0 10px}
 .bar{display:grid;grid-template-columns:48px 1fr 40px;gap:8px;align-items:center;font-size:12.5px}
 .bar i{display:block;height:10px;border-radius:5px;background:var(--acc)}
@@ -177,3 +177,25 @@ img.gif{image-rendering:pixelated;display:block}
 /* 스톤에이지 게임 커서(생선뼈) — sa_2903.exe 커서 리소스 3번에서 꺼낸 32x32, 기준점 (1,1) */
 html,body,*{cursor:url(fish-cursor.png) 1 1,auto !important}
 input,textarea,[contenteditable="true"]{cursor:url(fish-cursor.png) 1 1,text !important}
+.mm-title{font-size:13px;line-height:1.35;color:var(--text);padding:0 2px 2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mm-title b{font-weight:700} .mm-title span{color:var(--muted);font-size:12px}
+.lb-body .mm-title{color:#fff;font-size:17px;max-width:none!important} .lb-body .mm-title span{color:#b9c2d0;font-size:14px}
+.mm svg text.ml{paint-order:stroke;stroke:#000;stroke-linejoin:round;font-weight:700}
+.icard .ic .spr i,.ico.big .spr i,.item-pic .spr i{image-rendering:pixelated}
+.item-pic{width:176px;height:176px;display:flex;align-items:center;justify-content:center;background:var(--panel2);border-radius:12px;flex:none}
+.ico.big{display:inline-flex;align-items:center;gap:6px;padding:4px 8px 4px 4px}
+.ico.big .spr{background:var(--panel2);border-radius:6px}
+@media (max-width:600px){.icards{grid-template-columns:1fr}.icard .ic{width:76px;height:76px}.item-pic{width:150px;height:150px}}
+.av{margin:14px 0}.av-head{display:flex;align-items:center;gap:10px;flex-wrap:wrap}.av-head h3{margin:0 8px 0 0}
+.av-main{display:flex;gap:16px;flex-wrap:wrap;align-items:flex-start;margin-top:10px}
+.av-stage{display:flex;flex-direction:column;align-items:center;gap:6px;min-width:200px;flex:1 1 280px}
+.av-stage canvas{image-rendering:pixelated;image-rendering:crisp-edges;max-width:100%;height:auto!important;background:repeating-conic-gradient(var(--panel2) 0 25%,var(--panel) 0 50%) 0 0/16px 16px;border-radius:10px;border:1px solid var(--line)}
+.av-ctl{flex:1 1 320px;display:flex;flex-direction:column;gap:10px;min-width:0}
+.av-acts{display:flex;flex-wrap:wrap;gap:6px}
+.av button,.seg button{min-height:40px;min-width:44px;padding:0 12px;border:1px solid var(--line);background:var(--panel2);color:var(--text);border-radius:8px;cursor:pointer;font:inherit;font-size:15px}
+.av button.on,.seg button.on{background:var(--acc);border-color:var(--acc);color:#fff}
+.av button:disabled{opacity:.35;cursor:default}
+.av-row{display:flex;gap:14px;flex-wrap:wrap;align-items:flex-start}
+.av-pad{display:grid;grid-template-columns:repeat(3,48px);grid-template-rows:repeat(3,48px);gap:4px}.av-pad button{min-width:0;padding:0;font-size:20px}
+.av-btns{display:flex;flex-direction:column;gap:6px}.av-btns>div{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.av select{min-height:36px}.seg{display:inline-flex;gap:0}.seg button{border-radius:0}.seg button:first-child{border-radius:8px 0 0 8px}.seg button:last-child{border-radius:0 8px 8px 0}

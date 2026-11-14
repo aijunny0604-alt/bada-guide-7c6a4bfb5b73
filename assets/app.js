@@ -1,4 +1,4 @@
-/* 바다 가이드 — tools/make-guide-site.py 가 data/*.js 와 함께 복사한다. 손으로 고친 뒤에는 도구의 tools/guide-site/app.js 를 고친다. */
+/* 뿌이의 스톤에이지(바다 가이드) — tools/make-guide-site.py 가 data/*.js 와 함께 복사한다. 손으로 고친 뒤에는 도구의 tools/guide-site/app.js 를 고친다. */
 (function () {
   'use strict';
   var SA = window.SA || {};
@@ -110,6 +110,43 @@
     return '<div class="fig"><div class="scene" data-fig="' + k + '" style="width:' + Math.round(W * sc) + 'px;height:' + Math.round(Hh * sc) + 'px" title="클릭하면 크게"><div class="bg" style="width:' + W + 'px;height:' + Hh + 'px;background:url(img/' + SC.sheets[c[0]] + ') -' + c[1] + 'px -' + c[2] +
       'px;transform:scale(' + sc + ')"></div><svg viewBox="0 0 ' + W + ' ' + Hh + '">' + sceneSvg(c, marks) + '</svg></div>' + (cap ? '<span class="cap">' + esc(cap) + '</span>' : '') + '</div>';
   }
+  // 미니맵 위 지명·워프·NPC 이름표. lab = 화면 px / SVG 단위. occ = 이미 쓴 자리[[x,y,w,h]](SVG 단위). box = 보이는 범위.
+  var LCOL = { warp: '#5fdcff', heal: '#ff8fc8', shop: '#ffd27a', portal: '#c9a6ff', npc: '#ffffff', boss: '#ff7a6e', hunt: '#9dff8a' };
+  function textW(t, fs) { var w = 0; for (var i = 0; i < t.length; i++) w += t.charCodeAt(i) > 0x2e80 ? fs * 1.0 : fs * 0.58; return w; }
+  function hit(r, occ) { for (var i = 0; i < occ.length; i++) { var o = occ[i]; if (r[0] < o[0] + o[2] && o[0] < r[0] + r[2] && r[1] < o[1] + o[3] && o[1] < r[1] + r[3]) return true; } return false; }
+  function placeLabels(c, fl, lab, box, occ, skip) {
+    var L = (SC.lab || {})[fl];
+    if (!L || !L.length) return '';
+    var q = c[5], hm = c[6], fs = (lab < 1 ? 10.5 : 11.5) / lab, out = '', dots = '', drawn = 0;
+    var P = function (x, y) { return [q * (x - y + hm), q * (x + y + 1) / 2]; };
+    var list = L.slice().sort(function (a, b) { return a[4] - b[4]; });
+    list.forEach(function (l) {
+      if (skip && skip[l[0] + ',' + l[1]]) return;
+      var a = P(l[0], l[1]);
+      if (a[0] < box[0] || a[1] < box[1] || a[0] > box[0] + box[2] || a[1] > box[1] + box[3]) return;
+      var t = l[2], w = textW(t, fs) + 4 / lab, h = fs * 1.25, g = 4 / lab;
+      var cand = [[a[0] + g, a[1] - h / 2], [a[0] - g - w, a[1] - h / 2], [a[0] - w / 2, a[1] - g - h], [a[0] - w / 2, a[1] + g]];
+      for (var i = 0; i < cand.length; i++) {
+        var r = [cand[i][0], cand[i][1], w, h];
+        if (r[0] < box[0] || r[1] < box[1] || r[0] + w > box[0] + box[2] || r[1] + h > box[1] + box[3] || hit(r, occ)) continue;
+        occ.push(r);
+        var col = LCOL[l[3]] || '#fff';
+        dots += '<circle cx="' + a[0].toFixed(1) + '" cy="' + a[1].toFixed(1) + '" r="' + (2.6 / lab).toFixed(2) + '" fill="' + col + '" stroke="#000" stroke-width="' + (0.8 / lab).toFixed(2) + '"/>';
+        out += '<text class="ml" x="' + (r[0] + 2 / lab).toFixed(1) + '" y="' + (r[1] + h * 0.8).toFixed(1) + '" fill="' + col + '" stroke-width="' + (3 / lab).toFixed(2) + '" style="font-size:' + fs.toFixed(2) + 'px">' + esc(t) + '</text>';
+        drawn++;
+        return;
+      }
+    });
+    return dots + out;
+  }
+  function pillRect(x, y, n, t, W, H, small) {
+    var fs = small ? 11 : 15, tw = Math.round(t.length * fs * 0.95) + 14 + (n ? fs + 6 : 0), th = fs + 10;
+    var lx = Math.max(2, Math.min(W - tw - 2, x - tw / 2)), ly = y - th - (small ? 8 : 40);
+    if (ly < 2) ly = y + (small ? 8 : 12);
+    return [lx, ly, tw, th];
+  }
+  function fname(f) { return (SC.fn && SC.fn[f]) || nmFloor(f); }
+  function mmTitle(f, w) { return '<div class="mm-title" style="max-width:' + Math.max(160, Math.round(w)) + 'px"><b>' + esc(fname(f)) + '</b> <span>· ' + f + '</span></div>'; }
   function mmSvg(c, fl, marks, arrive, lab) {
     var q = c[5], hm = c[6], w = c[3], hh = c[4], out = '';
     var P = function (x, y) { return [q * (x - y + hm), q * (x + y + 1) / 2]; };
@@ -124,15 +161,18 @@
       var a = P(m.x, m.y), col = KCOL[m.k] || '#ff3b30';
       out += '<circle cx="' + a[0] + '" cy="' + a[1] + '" r="' + 6 / lab + '" fill="' + col + '" stroke="#fff" stroke-width="' + 1.5 / lab + '"/>';
     });
+    var occ = [], skip = {};
+    (marks || []).forEach(function (m) { var a = P(m.x, m.y); skip[m.x + ',' + m.y] = 1; occ.push([a[0] - 7 / lab, a[1] - 7 / lab, 14 / lab, 14 / lab]); if (lab >= 0.6) occ.push(pillRect(a[0], a[1], m.n, m.t || '', w, hh, true)); });
+    var ml = placeLabels(c, fl, lab, [0, 0, w, hh], occ, skip);
     if (lab >= 0.6) (marks || []).forEach(function (m) { var a = P(m.x, m.y); out += svgLabel(a[0], a[1], m.n, m.t || '', KCOL[m.k] || '#ff3b30', w, hh, true); });
-    return out;
+    return ml + out;
   }
   function mmHtml(fl, marks, arrive, cap, maxw) {
     var c = SC.mm && SC.mm[fl];
     if (!c) return '';
     var w = c[3], hh = c[4], sc = Math.min(2.5, (maxw || 300) / w), k = FIGS.push({ t: 'm', fl: fl, marks: marks, arrive: arrive, cap: cap }) - 1;
-    return '<div class="fig"><div class="mm" data-fig="' + k + '" style="width:' + Math.round(w * sc) + 'px;height:' + Math.round(hh * sc) + 'px" title="클릭하면 크게"><div class="bg" style="width:' + w + 'px;height:' + hh + 'px;background:url(img/' + SC.msheets[c[0]] + ') -' + c[1] + 'px -' + c[2] +
-      'px;transform:scale(' + sc + ')"></div><svg viewBox="0 0 ' + w + ' ' + hh + '">' + mmSvg(c, fl, marks, arrive, sc) + '</svg></div><span class="cap">' + esc(cap || ('맵 ' + fl + ' 미니맵 · 하늘색 점 = 워프')) + '</span></div>';
+    return '<div class="fig">' + mmTitle(fl, w * sc) + '<div class="mm" data-fig="' + k + '" style="width:' + Math.round(w * sc) + 'px;height:' + Math.round(hh * sc) + 'px" title="클릭하면 크게"><div class="bg" style="width:' + w + 'px;height:' + hh + 'px;background:url(img/' + SC.msheets[c[0]] + ') -' + c[1] + 'px -' + c[2] +
+      'px;transform:scale(' + sc + ')"></div><svg viewBox="0 0 ' + w + ' ' + hh + '">' + mmSvg(c, fl, marks, arrive, sc) + '</svg></div><span class="cap">' + esc(cap || '층 전체 미니맵') + ' <span class="muted">· 하늘색 = 워프(→ 가는 곳)</span></span></div>';
   }
   var LB = { k: -1, z: 1 };
   function openFig(k) {
@@ -238,7 +278,7 @@
     var cards = [['#/start', '시작하기', '접속·명령어·포탈', (GD.cmds || []).length + '개 명령'], ['#/hunts', '사냥터·던전', '레벨대·경험치·몹·보스', c.hunts],
       ['#/quests', '퀘스트·NPC', '원작 이벤트·교환·8.0 NPC', c.quests], ['#/pets', '펫 도감', 'petmake 번호·속성·출현', c.pets],
       ['#/items', '아이템 도감', 'additem 번호·세트·얻는 곳', c.items], ['#/rides', '탑승', '몸 12종 탑승 그림', c.rides], ['#/updates', '업데이트 기록', 'CHANGELOG', c.changelog]];
-    var h = '<div class="banner"><h1>바다 스톤에이지 가이드</h1><div class="muted">' + esc(verText()) + '<br>그림: ' + esc((M.runtime || '').split('/').slice(-2).join('/')) +
+    var h = '<div class="banner"><h1>뿌이의 스톤에이지 <span class="muted small">공략 가이드</span></h1><div class="muted">' + esc(verText()) + '<br>그림: ' + esc((M.runtime || '').split('/').slice(-2).join('/')) +
       ' · 이 페이지는 <code>python -I tools/make-guide-site.py</code>로 다시 만듭니다(서버 자료·문서에서 자동 생성).</div></div>';
     h += '<div class="grid home-cards">' + cards.map(function (x) { return '<div class="card home-card" data-go="' + x[0] + '"><div>' + x[1] + '</div><b>' + esc(x[3] == null ? '' : x[3]) + '</b><div class="muted small">' + x[2] + '</div></div>'; }).join('') + '</div>';
     h += '<h2>내 레벨에 맞는 사냥터</h2><div class="toolbar"><label>캐릭터 Lv <input type="number" id="myLv" min="1" max="300" value="' + esc(lv) + '"></label><span class="muted small">몹 레벨이 내 레벨 −15 ~ +5 인 곳 중 레벨업이 빠른 순</span></div><div id="recHunts"></div>';
@@ -644,10 +684,22 @@
         run += d2;
       }
     }
+    var occ = [], skip = {};
+    [seg.a, seg.b].forEach(function (m) {
+      var a = P(m.x, m.y), r = pillRect((a[0] - bx) * lab, (a[1] - by) * lab, 'S', (m.t || '').slice(0, 24), bw * lab, bh * lab, true);
+      skip[m.x + ',' + m.y] = 1;
+      occ.push([a[0] - 8 / lab, a[1] - 8 / lab, 16 / lab, 16 / lab]);
+      if (lab >= 0.55) occ.push([bx + r[0] / lab, by + r[1] / lab, r[2] / lab, r[3] / lab]);
+    });
+    out += placeLabels(c, seg.f, lab, [bx, by, bw, bh], occ, skip);
+    var aPill = null;
     [['a', seg.a], ['b', seg.b]].forEach(function (pp) {
       var m = pp[1], a = P(m.x, m.y), col = (RK[m.k] || RK.npc)[0];
       out += '<circle cx="' + a[0] + '" cy="' + a[1] + '" r="' + 6.5 / lab + '" fill="' + col + '" stroke="#fff" stroke-width="' + 1.5 / lab + '"/>';
-      if (lab >= 0.55) out += '<g transform="translate(' + a[0] + ',' + a[1] + ') scale(' + (1 / lab) + ')">' + svgLabel(0, 0, pp[0] === 'a' ? 'S' : 'G', (m.t || '').slice(0, 24), col, 9999, 9999, true).replace(/x="-?[\d.]+"/, function (t) { return t; }) + '</g>';
+      var gx = (a[0] - bx) * lab, gy = (a[1] - by) * lab, tt = (m.t || '').slice(0, 24);
+      if (pp[0] === 'a') aPill = pillRect(gx, gy, 'S', tt, bw * lab, bh * lab, true);
+      else if (aPill) { var r2 = pillRect(gx, gy, 'G', tt, bw * lab, bh * lab, true); if (hit(r2, [aPill])) gy += 37; }   // S·G 이름표가 겹치면 G 를 아래로
+      if (lab >= 0.55) out += '<g transform="translate(' + bx + ',' + by + ') scale(' + (1 / lab) + ')">' + svgLabel(gx, gy, pp[0] === 'a' ? 'S' : 'G', tt, col, bw * lab, bh * lab, true) + '</g>';
     });
     return out;
   }
@@ -657,7 +709,7 @@
     var circ = '①②③④⑤⑥⑦⑧⑨';
     return '<div class="figs">' + segs.map(function (sg, i) {
       var c = SC.mm && SC.mm[sg.f];
-      if (!c) return '<div class="fig"><span class="cap">' + circ[i] + ' 맵 ' + sg.f + ' (미니맵 없음)</span></div>';
+      if (!c) return '<div class="fig"><span class="cap">' + circ[i] + ' ' + esc(fname(sg.f)) + ' · ' + sg.f + ' (미니맵 없음)</span></div>';
       var W0 = c[3], H0 = c[4], q = c[5], hm = c[6], xs = [], ys = [];
       sg.pts.concat([[sg.a.x, sg.a.y], [sg.b.x, sg.b.y]]).forEach(function (p) { xs.push(q * (p[0] - p[1] + hm)); ys.push(q * (p[0] + p[1] + 1) / 2); });
       var pad = Math.max(14, 0.12 * Math.max(Math.max.apply(null, xs) - Math.min.apply(null, xs), 2 * (Math.max.apply(null, ys) - Math.min.apply(null, ys))));
@@ -668,9 +720,9 @@
       if (bw < bh * 1.3) { var cx0 = bx + bw / 2; bw = Math.min(W0, bh * 1.3); bx = Math.max(0, Math.min(W0 - bw, cx0 - bw / 2)); }
       if (bh < bw / 1.6) { var cy0 = by + bh / 2; bh = Math.min(H0, bw / 1.6); by = Math.max(0, Math.min(H0 - bh, cy0 - bh / 2)); }
       var sc = Math.min(zcap || 4, (maxw || 260) / bw), w = bw, hh = bh, k = FIGS.push({ t: 'r', seg: sg, cap: '' }) - 1;
-      var cap = circ[i] + ' ' + esc((nmFloor(sg.f))) + ': ' + esc(sg.a.t) + ' → ' + esc(sg.b.t) + ' (' + Math.max(0, sg.pts.length - 1) + '꺾임)';
+      var cap = circ[i] + ' ' + esc(sg.a.t) + ' → ' + esc(sg.b.t) + ' (' + Math.max(0, sg.pts.length - 1) + '꺾임)';
       FIGS[k].cap = cap;
-      return '<div class="fig"><div class="mm" data-fig="' + k + '" style="width:' + Math.round(w * sc) + 'px;height:' + Math.round(hh * sc) + 'px" title="클릭하면 크게"><div class="bg" style="width:' + W0 + 'px;height:' + H0 + 'px;background:url(img/' + SC.msheets[c[0]] + ') -' + c[1] + 'px -' + c[2] +
+      return '<div class="fig">' + mmTitle(sg.f, w * sc).replace('<b>', '<b>' + circ[i] + ' ') + '<div class="mm" data-fig="' + k + '" style="width:' + Math.round(w * sc) + 'px;height:' + Math.round(hh * sc) + 'px" title="클릭하면 크게"><div class="bg" style="width:' + W0 + 'px;height:' + H0 + 'px;background:url(img/' + SC.msheets[c[0]] + ') -' + c[1] + 'px -' + c[2] +
         'px;transform:scale(' + sc + ') translate(-' + bx.toFixed(1) + 'px,-' + by.toFixed(1) + 'px);image-rendering:' + (sc > 2 ? 'pixelated' : 'auto') + '"></div><svg viewBox="' + bx.toFixed(1) + ' ' + by.toFixed(1) + ' ' + w.toFixed(1) + ' ' + hh.toFixed(1) + '">' + routeSvg(c, sg, sc, bx, by, w, hh) + '</svg></div><span class="cap">' + cap + '</span></div>' + (i < segs.length - 1 ? '<div class="route-arrow">➜</div>' : '');
     }).join('') + '</div>';
   }
@@ -681,7 +733,7 @@
       Q.quests.forEach(function (q) { q.start.concat(q.finish).forEach(function (s) { FLN[s.npc.floor] = s.npc.fname; }); });
       FLN[1000] = '샴기르 마을';
     }
-    return FLN[f] || ('맵 ' + f);
+    return (SC.fn && SC.fn[f]) || FLN[f] || ('맵 ' + f);
   }
 
   // ---------------------------------------------------------------- 얻는 방법(펫·아이템 공용)
@@ -817,6 +869,122 @@
     return '<div class="bars">' + st.map(function (v, k) { return '<div class="bar"><span>' + lab[k] + '</span><i style="width:' + Math.min(100, v / mx * 100) + '%"></i><b>' + v + '</b></div>'; }).join('') +
       '<div class="bar"><span>성장률</span><i style="width:' + Math.min(100, gr / 7 * 100) + '%;background:var(--warn)"></i><b>' + gr + '</b></div></div>';
   }
+
+  // ---------------------------------------------------------------- 움직임 보기(동작·8방향 캔버스)
+  // 방향 번호: 0 아래(앞) · 1 왼쪽 아래 · 2 왼쪽 · 3 왼쪽 위 · 4 위(뒤) · 5 오른쪽 위 · 6 오른쪽 · 7 오른쪽 아래
+  var DIR_ARROW = ['↓', '↙', '←', '↖', '↑', '↗', '→', '↘'], DIR_KO = ['앞', '왼쪽 앞', '왼쪽', '왼쪽 뒤', '뒤', '오른쪽 뒤', '오른쪽', '오른쪽 앞'];
+  var PAD = [3, 4, 5, 2, -1, 6, 1, 0, 7];
+  var ACT_ORDER = [3, 4, 0, 1, 10, 2, 9, 5, 6, 7, 8, 11, 12];
+  function actName(a) { return ((A.act_ko || {})[a]) || ('동작 ' + a); }
+  function loadAnim(id, cb) {
+    SA.anim = SA.anim || {};
+    if (SA.anim[id]) { cb(SA.anim[id]); return; }
+    var sc = document.createElement('script');
+    sc.src = 'media/anim/' + id + '.js';
+    sc.onload = function () { cb(SA.anim[id] || null); };
+    sc.onerror = function () { cb(null); };
+    document.head.appendChild(sc);
+  }
+  var AV = null;
+  function avStop() { if (AV && AV.timer) clearTimeout(AV.timer); if (AV) AV.dead = true; AV = null; }
+  function avHtml(p, rr) {
+    var rideRows = rr && rr.av && rr.av.length ? rr.av : [];
+    return '<div class="panel av" id="av"><div class="av-head"><h3>움직임 보기</h3>' +
+      (rideRows.length ? '<div class="seg" id="avMode"><button class="on" data-m="pet">펫</button><button data-m="ride">탑승</button></div><select id="avBody" hidden>' + rideRows.map(function (k) { return '<option value="' + k + '">' + esc(BODY[k] || ('몸 ' + k)) + '</option>'; }).join('') + '</select>' : '') +
+      '</div><div class="av-main"><div class="av-stage"><canvas id="avCv" width="10" height="10"></canvas><div class="av-info small muted" id="avInfo">불러오는 중…</div><div class="small muted" id="avNote"></div></div>' +
+      '<div class="av-ctl"><div class="av-acts" id="avActs"></div><div class="av-row"><div class="av-pad" id="avPad">' + PAD.map(function (d) { return d < 0 ? '<button data-rot="1" title="돌리기">⟳</button>' : '<button data-d="' + d + '" title="' + DIR_KO[d] + '">' + DIR_ARROW[d] + '</button>'; }).join('') + '</div>' +
+      '<div class="av-btns"><div><button data-r="-1" title="왼쪽으로 돌리기">◀ 돌리기</button><button data-r="1" title="오른쪽으로 돌리기">돌리기 ▶</button></div>' +
+      '<div><button id="avPlay" title="재생/멈춤 (스페이스)">⏸ 멈춤</button><button data-st="-1" title="이전 프레임 (,)">⏮</button><button data-st="1" title="다음 프레임 (.)">⏭</button></div>' +
+      '<div><label class="small">속도 <select id="avSpd"><option value="0.25">0.25x</option><option value="0.5">0.5x</option><option value="1" selected>1x</option><option value="2">2x</option></select></label> ' +
+      '<label class="small">크기 <select id="avZ"><option value="1">1x</option><option value="2" selected>2x</option><option value="3">3x</option></select></label></div></div></div>' +
+      '<div class="muted small">키보드: ←/→ 방향 돌리기 · ↑/↓ 동작 바꾸기 · 스페이스 재생/멈춤 · , . 한 프레임씩</div></div></div></div>';
+  }
+  function avInit(p, rr) {
+    avStop();
+    var st = { id: p.img, act: 3, dir: 1, fi: 0, play: true, spd: 1, z: innerWidth < 600 ? 2 : 2, data: null, img: null, timer: 0 };
+    AV = st;
+    var cv = $('#avCv'), ctx = cv.getContext('2d');
+    function acts() { return st.data ? ACT_ORDER.filter(function (a) { return st.data.a[a]; }).concat(Object.keys(st.data.a).map(Number).filter(function (a) { return ACT_ORDER.indexOf(a) < 0; })) : []; }
+    function seq() { var a = st.data && st.data.a[st.act]; if (!a) return null; return a[st.dir] || a[Object.keys(a)[0]]; }
+    function drawActs() {
+      $('#avActs').innerHTML = acts().map(function (a) { return '<button data-a="' + a + '" class="' + (a === st.act ? 'on' : '') + '">' + esc(actName(a)) + '</button>'; }).join('');
+      var dirs = st.data && st.data.a[st.act] ? st.data.a[st.act] : {};
+      [].forEach.call($('#avPad').querySelectorAll('[data-d]'), function (b) { var d = +b.getAttribute('data-d'); b.className = (d === st.dir ? 'on' : '') ; b.disabled = !dirs[d]; });
+    }
+    function draw() {
+      if (!st.data || !st.img) return;
+      var d = st.data, b = d.b, z = st.z, pad = 6, W = (b[2] - b[0] + pad * 2), Hh = (b[3] - b[1] + pad * 2);
+      if (cv.width !== W * z || cv.height !== Hh * z) { cv.width = W * z; cv.height = Hh * z; cv.style.width = W * z + 'px'; cv.style.height = Hh * z + 'px'; }
+      ctx.imageSmoothingEnabled = false;
+      ctx.clearRect(0, 0, cv.width, cv.height);
+      var sq = seq();
+      if (!sq) return;
+      var f = d.f[sq[1][st.fi % sq[1].length]];
+      ctx.drawImage(st.img, f[0], f[1], f[2], f[3], (f[4] - b[0] + pad) * z, (f[5] - b[1] + pad) * z, f[2] * z, f[3] * z);
+      $('#avInfo').textContent = actName(st.act) + ' · ' + DIR_KO[st.dir] + '(' + st.dir + ') · 프레임 ' + (st.fi % sq[1].length + 1) + '/' + sq[1].length + ' · ' + sq[0] + 'ms';
+    }
+    function tick() {
+      if (st.dead || AV !== st) return;
+      if (!document.body.contains(cv)) { avStop(); return; }
+      var sq = seq();
+      if (st.play && sq) { st.fi = (st.fi + 1) % sq[1].length; draw(); }
+      st.timer = setTimeout(tick, Math.max(30, (sq ? sq[0] : 100) / st.spd));
+    }
+    function load(id) {
+      st.id = id; st.data = null; st.img = null; $('#avInfo').textContent = '불러오는 중…';
+      loadAnim(id, function (d) {
+        if (st.dead || st.id !== id) return;
+        if (!d) { $('#avInfo').textContent = '움직임 그림이 없습니다.'; return; }
+        var im = new Image();
+        im.onload = function () {
+          if (st.dead || st.id !== id) return;
+          st.data = d; st.img = im;
+          if (!d.a[st.act]) st.act = acts()[0];
+          if (!d.a[st.act][st.dir]) st.dir = +Object.keys(d.a[st.act])[0];
+          st.fi = 0; drawActs(); draw();
+          $('#avNote').textContent = d.lv === 'lite' ? '용량 때문에 서기·걷기만 8방향, 다른 동작은 대각선 4방향' : d.lv === 'field' ? (id === p.img ? '용량 때문에 서기·걷기만 8방향, 다른 동작은 앞쪽 1방향' : '탑승은 서기·걷기 8방향') : '';
+        };
+        im.src = d.s;
+      });
+    }
+    function setDir(d) { st.dir = (d + 8) % 8; st.fi = 0; drawActs(); draw(); }
+    function rot(k) { var dirs = st.data && st.data.a[st.act] || {}; var d = st.dir; for (var i = 0; i < 8; i++) { d = (d + k + 8) % 8; if (dirs[d]) break; } setDir(d); }
+    function step(k) { var sq = seq(); if (!sq) return; st.play = false; $('#avPlay').textContent = '▶ 재생'; st.fi = (st.fi + k + sq[1].length) % sq[1].length; draw(); }
+    function setAct(a) { st.act = a; st.fi = 0; if (!st.data.a[a][st.dir]) st.dir = +Object.keys(st.data.a[a])[0]; drawActs(); draw(); }
+    $('#av').addEventListener('click', function (e) {
+      var t = e.target.closest('button'); if (!t) return;
+      if (t.hasAttribute('data-a')) setAct(+t.getAttribute('data-a'));
+      else if (t.hasAttribute('data-d')) setDir(+t.getAttribute('data-d'));
+      else if (t.hasAttribute('data-rot')) rot(1);
+      else if (t.hasAttribute('data-r')) rot(+t.getAttribute('data-r'));
+      else if (t.hasAttribute('data-st')) step(+t.getAttribute('data-st'));
+      else if (t.id === 'avPlay') { st.play = !st.play; t.textContent = st.play ? '⏸ 멈춤' : '▶ 재생'; }
+      else if (t.hasAttribute('data-m')) {
+        [].forEach.call($('#avMode').children, function (x) { x.className = x === t ? 'on' : ''; });
+        var ride = t.getAttribute('data-m') === 'ride';
+        $('#avBody').hidden = !ride;
+        load(ride ? rr.a[$('#avBody').value] : p.img);
+      }
+    });
+    if ($('#avBody')) $('#avBody').addEventListener('change', function () { load(rr.a[this.value]); });
+    $('#avSpd').addEventListener('change', function () { st.spd = +this.value; });
+    $('#avZ').addEventListener('change', function () { st.z = +this.value; draw(); });
+    load(p.img);
+    tick();
+  }
+  document.addEventListener('keydown', function (e) {
+    if (!AV || !AV.data || /INPUT|SELECT|TEXTAREA/.test((e.target || {}).tagName || '') || !$('#modal').hidden) return;
+    var k = e.key, b = function (sel) { var x = $('#av').querySelector(sel); if (x) x.click(); };
+    if (k === 'ArrowLeft') { b('[data-r="-1"]'); e.preventDefault(); }
+    else if (k === 'ArrowRight') { b('[data-r="1"]'); e.preventDefault(); }
+    else if (k === ' ') { b('#avPlay'); e.preventDefault(); }
+    else if (k === ',') b('[data-st="-1"]');
+    else if (k === '.') b('[data-st="1"]');
+    else if (k === 'ArrowUp' || k === 'ArrowDown') {
+      var l = [].map.call($('#avActs').querySelectorAll('[data-a]'), function (x) { return +x.getAttribute('data-a'); }), i = l.indexOf(AV.act);
+      if (l.length) { var x = $('#avActs').querySelector('[data-a="' + l[(i + (k === 'ArrowDown' ? 1 : -1) + l.length) % l.length] + '"]'); if (x) x.click(); e.preventDefault(); }
+    }
+  });
   function pagePet(id) {
     var p = petById[id];
     if (!p) { app.innerHTML = '<p>펫을 찾지 못했습니다.</p>'; return; }
@@ -833,12 +1001,14 @@
     ways.sort(function (a, b) { return a.lv - b.lv; });
     h += '<div class="panel"><h3>얻는 방법</h3>' + (ways.length ? '<div class="rec"><span class="tag ride">추천 루트</span> ' + ways[0].html + '</div><ol class="srcs">' + ways.slice(1).map(function (w) { return '<li>' + w.html + '</li>'; }).join('') + '</ol>' : '<p>GM 전용(야생·퀘스트 경로 없음)</p>') +
       '<p class="muted small">GM: ' + copyBtn('[gm petmake ' + p.id + ' 1]') + '</p></div></div>';
+    if (p.av) h += avHtml(p, rr);
     h += spotsHtml(p);
     var w0 = p.wild.filter(function (w) { return w.c && w.hid; })[0];
     if (w0) { var x = huntById[w0.hid]; if (x && x.mm) h += '<h2>잡으러 가는 곳: ' + esc(x.label) + '</h2>' + (x.route ? routeHtml(x.route, halfW(2)) : '') + '<div class="figs">' + (x.scenes || []).slice(0, 1).map(function (s) { return sceneHtml(s.id, s.marks.map(function (m, k) { return { x: m.x, y: m.y, k: m.k, t: m.t, n: k + 1 }; }), s.title, bigScale(2)); }).join('') + '</div>'; }
     if (p.r.length) { var r = rideById[p.id]; h += '<h2>탑승 (' + p.r.length + '/12 몸)</h2><p class="muted small">펫 칸에 넣고 <code>[gm 펫탑승 칸번호]</code>. 몸 줄별 탑승 그림(첫 프레임).</p>' + (r ? rideGrid(r) : rows12(p.r)); }
     if (p.sib.length) h += '<h2>같은 계열(색·변종)</h2><div class="grid cards">' + p.sib.map(function (i) { return petById[i]; }).filter(Boolean).map(petCard).join('') + '</div>';
     app.innerHTML = h;
+    if (p.av) avInit(p, rr);
   }
 
   // ---------------------------------------------------------------- 아이템
@@ -846,7 +1016,7 @@
     ['p', '펫 아이템', null, ['펫 아이템']], ['m', '재료', null, ['재료']], ['q', '퀘스트', null, ['퀘스트']], ['o', '기타', [16, 21, 22, 23]]];
   var iState = { g: '', sub: '', tier: '', src: '', v80: false, set: false, q: '', band: '', sort: 'id', shown: 120, tab: 'items' };
   function itemCard(i) {
-    return '<div class="card icard" data-go="#/item/' + i.id + '"><div class="ic">' + itemImg(i.img, 48) + '</div><div class="qbody"><div class="idrow"><span class="id">' + i.id + '</span>' + copyBtn('[gm additem ' + i.id + ' 1]', 'additem') + '</div>' +
+    return '<div class="card icard" data-go="#/item/' + i.id + '"><div class="ic">' + itemImg(i.img, 80, 3) + '</div><div class="qbody"><div class="idrow"><span class="id">' + i.id + '</span>' + copyBtn('[gm additem ' + i.id + ' 1]', 'additem') + '</div>' +
       '<b class="ellip" title="' + esc(i.n) + '">' + esc(i.n) + '</b><div class="small ellip">' + esc(i.sub) + (i.lv ? ' · Lv' + i.lv : '') + (i.st ? ' · ' + esc(i.st) : '') + '</div>' +
       '<div>' + (i.v80 ? '<span class="tag v80">8.0</span>' : '') + (i.s ? '<span class="tag legend">세트</span>' : '') + (i.t != null ? '<span class="tag">' + (i.t < 6 ? 'T' + (i.t + 1) : '화염') + '</span>' : '') + '</div>' +
       '<div class="muted small ellip">' + esc(i.src.length ? srcShort(i.src[0]) + (i.src.length > 1 ? ' 외 ' + (i.src.length - 1 + (i.more || 0)) : '') : 'GM 전용') + '</div></div></div>';
@@ -857,7 +1027,7 @@
     var h = '<h1>아이템 도감 <span class="muted small">' + IT.length + '개</span></h1><div class="tabs"><a href="#/items?tab=items" class="' + (iState.tab === 'items' ? 'on' : '') + '">아이템</a><a href="#/items?tab=sets" class="' + (iState.tab === 'sets' ? 'on' : '') + '">세트 묶음 ' + SETS.length + '</a></div>';
     if (iState.tab === 'sets') {
       h += '<div class="grid" style="grid-template-columns:repeat(auto-fill,minmax(360px,1fr))">' + SETS.slice().sort(function (a, b) { return a.lv - b.lv; }).map(function (s) {
-        return '<div class="panel"><h3>' + esc(s.name) + ' <span class="muted small">Lv.' + s.lv + ' · ' + s.ids.length + '부위</span></h3><div class="icons">' + s.ids.map(function (i) { var it = itemById[i]; return it ? '<a class="ico" href="#/item/' + i + '">' + itemImg(it.img, 32) + esc(it.n) + '</a>' : ''; }).join('') + '</div><p class="small">3부위 이상: ' + esc(s.bonus || '부위별 능력') + '</p>' +
+        return '<div class="panel"><h3>' + esc(s.name) + ' <span class="muted small">Lv.' + s.lv + ' · ' + s.ids.length + '부위</span></h3><div class="icons">' + s.ids.map(function (i) { var it = itemById[i]; return it ? '<a class="ico big" href="#/item/' + i + '">' + itemImg(it.img, 56, 2) + esc(it.n) + '</a>' : ''; }).join('') + '</div><p class="small">3부위 이상: ' + esc(s.bonus || '부위별 능력') + '</p>' +
           (s.drops.length ? '<p class="small muted">드롭: ' + s.drops.map(function (d) { return (d.hid ? huntLink(d.hid) : esc(d.fname)) + ' ' + d.pm / 10 + '%'; }).join(', ') + '</p>' : '') + '</div>';
       }).join('') + '</div>';
       app.innerHTML = h; return;
@@ -905,12 +1075,12 @@
     var i = itemRep[id];
     if (!i) { app.innerHTML = '<p>아이템을 찾지 못했습니다.</p>'; return; }
     var s = i.s ? setBySuit[i.s] : null;
-    var h = '<p><a href="#/items">← 아이템 도감</a></p><div class="detail-head"><div class="detail-pic">' + itemImg(i.img, 120, 2) + '</div><div><h1>' + esc(i.n) + '</h1><p><span class="id" style="font-size:22px">' + i.id + '</span> ' +
+    var h = '<p><a href="#/items">← 아이템 도감</a></p><div class="detail-head"><div class="detail-pic item-pic">' + itemImg(i.img, 160, 4) + '</div><div><h1>' + esc(i.n) + '</h1><p><span class="id" style="font-size:22px">' + i.id + '</span> ' +
       copyBtn('[gm additem ' + i.id + ' 1]') + ' ' + copyBtn('[gm additem ' + i.id + ' 5]') + '</p><div>' + tags(i.k) + '</div></div></div>';
     h += '<div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(320px,1fr))"><div class="panel"><h3>정보</h3><div class="kv"><div>종류</div><div>' + esc(i.tn) + ' · ' + esc(i.sub) + (i.v80 ? ' <span class="tag v80">8.0 봉인해제</span>' : '') + '</div><div>착용 Lv</div><div>' + (i.lv || '-') + '</div><div>능력</div><div>' + esc(i.st || '-') + '</div><div>설명·효과</div><div>' + esc(i.ef || '-') + '</div>' +
       (i.same && i.same.length ? '<div>같은 아이템 번호</div><div class="small">' + i.same.join(', ') + '</div>' : '') + '</div></div>' +
       getSection(i.src, i.more, copyBtn('[gm additem ' + i.id + ' 1]')) + '</div>';
-    if (s) h += '<div class="panel"><h3>세트: ' + esc(s.name) + '</h3><div class="icons">' + s.ids.map(function (x) { var it = itemById[x]; return it ? '<a class="ico' + (x === i.id ? ' cur' : '') + '" href="#/item/' + x + '">' + itemImg(it.img, 32) + esc(it.n) + '</a>' : ''; }).join('') + '</div><p class="small">3부위 이상: ' + esc(s.bonus) + '</p></div>';
+    if (s) h += '<div class="panel"><h3>세트: ' + esc(s.name) + '</h3><div class="icons">' + s.ids.map(function (x) { var it = itemById[x]; return it ? '<a class="ico big' + (x === i.id ? ' cur' : '') + '" href="#/item/' + x + '">' + itemImg(it.img, 56, 2) + esc(it.n) + '</a>' : ''; }).join('') + '</div><p class="small">3부위 이상: ' + esc(s.bonus) + '</p></div>';
     var hunt = i.src.filter(function (x) { return x.hid; })[0] || (i.src[0] && i.src[0].t === 'tier' ? { hid: ((H.tierHunts || {})[i.src[0].tier] || [])[0] } : null);
     if (hunt && huntById[hunt.hid]) { var x = huntById[hunt.hid]; h += '<h2>가까운 사냥터: ' + esc(x.label) + '</h2>' + (x.route ? routeHtml(x.route, 260) : '<p class="muted">입구: ' + (x.entry ? warp(x.entry[0], x.entry[1], x.entry[2]) : '-') + '</p>'); }
     app.innerHTML = h;

@@ -21,14 +21,19 @@
 <meta name="twitter:image" content="https://aijunny0604-alt.github.io/bada-guide-7c6a4bfb5b73/img/og-cover.jpg">
 <link rel="icon" type="image/png" href="img/favicon.png">
 <link rel="apple-touch-icon" href="img/apple-touch-icon.png">
-<link rel="stylesheet" href="assets/style.css?v=037b5b16">
+<link rel="stylesheet" href="assets/style.css?v=4de163a8">
 <script>try{var t=localStorage.getItem('sa-theme');if(t)document.documentElement.setAttribute('data-theme',t)}catch(e){}</script>
 </head>
 <body>
 <header class="top">
   <button class="icon-btn menu-btn" id="menuBtn" aria-label="메뉴">☰</button>
   <a class="brand" href="#/">뿌이의 <b>스톤에이지</b></a>
-  <button class="search-trigger" id="searchBtn"><span>펫·아이템·사냥터·퀘스트 검색</span><kbd>Ctrl K</kbd></button>
+  <div class="gsearch" id="gs">
+    <button class="icon-btn gs-icon" id="searchBtn" aria-label="검색" title="검색 (Ctrl K)">⌕</button>
+    <input id="searchIn" type="search" placeholder="펫·아이템·사냥터·퀘스트 검색 (예: 흑마, 25011)" autocomplete="off" aria-label="검색" aria-controls="searchRes">
+    <kbd class="gs-kbd">Ctrl K</kbd>
+    <div id="searchRes" class="search-res gs-drop" role="listbox" hidden></div>
+  </div>
   <span class="ver" id="ver"></span>
   <button class="icon-btn" id="themeBtn" aria-label="밝게/어둡게">◐</button>
 </header>
@@ -45,15 +50,9 @@
   <div class="side-foot" id="sideFoot"></div>
 </nav>
 <main id="app"><p class="muted pad">불러오는 중…</p></main>
-<div class="overlay" id="searchOv" hidden>
-  <div class="search-box">
-    <input id="searchIn" type="search" placeholder="이름이나 번호 (예: 골로스, 25011, 칠흑)" autocomplete="off">
-    <div id="searchRes" class="search-res"></div>
-  </div>
-</div>
 <div class="overlay" id="modal" hidden><div class="modal" id="modalBody"></div></div>
 <div class="toast" id="toast" hidden></div>
-<script src="data/meta.js?v=3b3a4b56"></script>
+<script src="data/meta.js?v=ed688f72"></script>
 <script src="data/atlas.js?v=48ae35b2"></script>
 <script src="data/guide.js?v=c816e7cc"></script>
 <script src="data/hunts.js?v=5367fa21"></script>
@@ -61,8 +60,8 @@
 <script src="data/pets.js?v=92413a30"></script>
 <script src="data/rides.js?v=93168822"></script>
 <script src="data/items.js?v=0561a2c4"></script>
-<script src="data/changelog.js?v=96d832b1"></script>
+<script src="data/changelog.js?v=abded17f"></script>
 <script src="data/scenes.js?v=59759c3e"></script>
-<script src="assets/app.js?v=dd04c3da"></script>
+<script src="assets/app.js?v=5f76a72b"></script>
 </body>
 </html>

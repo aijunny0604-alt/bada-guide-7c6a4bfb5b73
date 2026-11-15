@@ -328,10 +328,12 @@
   }
 
   // ---------------------------------------------------------------- 홈
+  function liveLabel() { var v = M.version || {}; return (v.live_label || v.live || '?') + '차'; }
   function verText() {
     var v = M.version || {};
+    if (v.basis) return '공략 자료: ' + v.basis + ' · 라이브 ' + liveLabel();
     return '서버 자료: 저장소 ' + (v.branch || '') + ' ' + (v.head || '') + (v.dirty ? ' (작업 중 변경 포함)' : '') +
-      (v.pending && v.pending.length ? ' · ' + v.pending.join('·') + '차 준비분 포함(라이브 미적용)' : '') + ' · 라이브 ' + (v.live || '?') + '차';
+      (v.pending && v.pending.length ? ' · ' + v.pending.join('·') + '차 준비분 포함(라이브 미적용)' : '') + ' · 라이브 ' + liveLabel();
   }
   function pageHome() {
     var c = M.counts || {};
@@ -1357,12 +1359,12 @@
 
   // ---------------------------------------------------------------- 업데이트
   var ST_KO = { live: ['라이브 적용', 'ride'], '14': ['14차 준비(미배포)', 'v80'], '15': ['15차 예정', 'legend'] };
-  function stTag(st) { var x = ST_KO[st]; return x ? '<span class="tag ' + x[1] + '">' + x[0] + '</span>' : ''; }
+  function stTag(st) { var x = ST_KO[st] || (/^\d/.test(st || '') ? [st + '차 준비(미배포)', 'v80'] : null); return x ? '<span class="tag ' + x[1] + '">' + x[0] + '</span>' : ''; }
   function pageUpdates() {
     var V = M.version || {}, NX = M.next_round || { items: [] }, CM = M.commits || [];
-    var h = '<h1>업데이트 기록</h1><p class="muted">CHANGELOG.md 최신순 ' + LOG.length + '개' + ((M.counts || {}).changelog > LOG.length ? ' (전체 ' + M.counts.changelog + ')' : '') + ' · 저장소 ' + esc(V.head || '') + '</p>';
+    var h = '<h1>업데이트 기록</h1><p class="muted">CHANGELOG.md 최신순 ' + LOG.length + '개' + ((M.counts || {}).changelog > LOG.length ? ' (전체 ' + M.counts.changelog + ')' : '') + ' · ' + (V.basis ? '공략 자료 ' + esc(V.basis) : '저장소 ' + esc(V.head || '')) + '</p>';
     h += '<div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(300px,1fr))">' +
-      '<div class="panel"><h3>' + stTag('live') + ' 지금 라이브: ' + (V.live || '?') + '차</h3><p class="small">집 PC 바다 서버에 적용된 판. 아래 “라이브 적용” 표시 항목까지 들어 있습니다.</p></div>' +
+      '<div class="panel"><h3>' + stTag('live') + ' 지금 라이브: ' + liveLabel() + (V.live_date ? ' <span class="muted small">(' + esc(V.live_date) + ' 배포)</span>' : '') + '</h3><p class="small">집 PC 바다 서버에 적용된 판. 아래 “라이브 적용” 표시 항목까지 들어 있습니다.</p></div>' +
       '<div class="panel"><h3>' + ((V.live || 0) >= 14 ? stTag('live') + ' 14차 라이브 — 2026-11-14 배포 (GMSV d5564836 · 클라 runtime-ko-11th)' : stTag('14') + ' 14차 준비 — 서버·클라 준비 끝, 배포 전') + '</h3><ul class="small">' +
       ['접속기: 창 모드 / 선명 전체화면 선택(설정 저장), 게임 창에서 Alt+Enter·F11 전환', '8.0 층 519개 서버 읽기 수정 · 가미 항공·GM 문구 한국어', '샴기르 고대 신전(64000) 워프 허브 · 흩어진 포탈 정리 · 가미 항공 한국어', '라온 펫 333종 · 라온 탑승 35줄', '한국판(원작) 캐릭터 · 엘크 원본 탑승', '탑승 정비(전체 몸 줄 allrow·재채색·phoenix)', '클라이언트 그림 용량 real64(4 GiB → 약 20 GiB)',
         '사냥터 간호사 · 던전 회복약·마석 드롭 · 경험치 곡선 · 펫 Lv300', '8.0 봉인해제 1·2단계(층 185 · 아이템 2,254 · 세트 25)', '페이지 거부 즉시 되돌림 · 지도 노란 칸(커서) 숨김', '결과창 펫 줄 · 오토 멈춤 · 일괄 기본 켬 · 다른 페이지 펫 회복'].map(function (t) { return '<li>' + esc(t) + '</li>'; }).join('') + '</ul></div>' +
@@ -1386,35 +1388,45 @@
     (GD.cmds || []).forEach(function (c) { IDX.push({ k: '명령', t: c.cmd, s: c.desc, h: '#/start', x: (c.cmd + ' ' + c.desc).toLowerCase() }); });
     SETS.forEach(function (s) { IDX.push({ k: '세트', t: s.name, s: s.ids.length + '부위', h: '#/items?tab=sets', x: s.name.toLowerCase() }); });
   }
-  var sel = 0, res = [];
-  function openSearch() { $('#searchOv').hidden = false; var i = $('#searchIn'); i.value = ''; i.focus(); doSearch(); }
-  function closeSearch() { $('#searchOv').hidden = true; }
+  // 위쪽 검색 칸(모달 없음): 입력하면 칸 바로 밑에 결과 목록이 붙어 나온다. 페이지는 가리지 않고 그대로 둔다.
+  var sel = 0, res = [], gsIn = $('#searchIn'), gsRes = $('#searchRes'), gsTop = document.querySelector('.top');
+  function dropOpen() { return !gsRes.hidden; }
+  function openDrop() { gsRes.hidden = false; }
+  function closeDrop() { gsRes.hidden = true; }
+  function focusSearch() { gsTop.classList.add('searching'); gsIn.focus(); gsIn.select(); if (gsIn.value.trim()) { doSearch(); openDrop(); } }
+  function endSearch(clear) { closeDrop(); if (clear) gsIn.value = ''; if (!gsIn.value) gsTop.classList.remove('searching'); gsIn.blur(); }
   function doSearch() {
     if (!IDX) buildIndex();
-    var q = $('#searchIn').value.toLowerCase().trim();
-    if (!q) { $('#searchRes').innerHTML = '<p class="pad muted">이름이나 번호를 입력하세요. ↑↓ 이동, Enter 열기, Esc 닫기.</p>'; res = []; return; }
+    var q = gsIn.value.toLowerCase().trim();
+    if (!q) { gsRes.innerHTML = ''; res = []; closeDrop(); return; }
     var toks = q.split(/\s+/), n = +q;
     res = IDX.filter(function (e) { return toks.every(function (t) { return e.x.indexOf(t) >= 0; }) || (n && e.alt && e.alt.indexOf(n) >= 0); })
       .map(function (e) { var sc = e.id === n ? 0 : e.t.toLowerCase() === q ? 1 : e.t.toLowerCase().indexOf(q) === 0 ? 2 : 3; return [sc, e]; })
       .sort(function (a, b) { return a[0] - b[0] || a[1].t.length - b[1].t.length; }).slice(0, 80).map(function (x) { return x[1]; });
     sel = 0;
-    $('#searchRes').innerHTML = res.length ? res.map(function (e, k) {
+    gsRes.innerHTML = '<div class="gs-head small muted">' + (res.length ? res.length + (res.length >= 80 ? '+' : '') + '개 · ↑↓ 이동 · Enter 열기 · Esc 닫기' : '결과 없음') + '</div>' + res.map(function (e, k) {
       return '<div class="sr' + (k === 0 ? ' sel' : '') + '" data-k="' + k + '"><span class="k">' + e.k + '</span>' + (e.img ? spr(e.img[0], e.img[1], 36) : '') + '<span class="ellip"><b>' + esc(e.t) + '</b> <span class="muted small">' + esc(e.s) + '</span></span></div>';
-    }).join('') : '<p class="pad muted">결과 없음</p>';
+    }).join('');
+    openDrop();
   }
-  function pick(k) { var e = res[k]; if (e) { closeSearch(); location.hash = e.h; } }
-  $('#searchBtn').addEventListener('click', openSearch);
-  $('#searchIn').addEventListener('input', doSearch);
-  $('#searchRes').addEventListener('click', function (e) { var r = e.target.closest('.sr'); if (r) pick(+r.getAttribute('data-k')); });
-  $('#searchOv').addEventListener('click', function (e) { if (e.target === this) closeSearch(); });
-  document.addEventListener('keydown', function (e) {
-    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') { e.preventDefault(); openSearch(); return; }
-    if ($('#searchOv').hidden) { if (e.key === '/' && !/INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName)) { e.preventDefault(); openSearch(); } return; }
-    if (e.key === 'Escape') closeSearch();
+  function pick(k) { var e = res[k]; if (e) { closeDrop(); gsIn.blur(); location.hash = e.h; } }
+  $('#searchBtn').addEventListener('click', function () { if (gsTop.classList.contains('searching') && !gsIn.value) endSearch(true); else focusSearch(); });
+  gsIn.addEventListener('input', doSearch);
+  gsIn.addEventListener('focus', function () { gsTop.classList.add('searching'); if (gsIn.value.trim()) { if (!res.length) doSearch(); openDrop(); } });
+  gsRes.addEventListener('mousedown', function (e) { e.preventDefault(); });   // 누르는 순간 입력 칸 blur 로 닫히지 않게
+  gsRes.addEventListener('click', function (e) { var r = e.target.closest('.sr'); if (r) pick(+r.getAttribute('data-k')); });
+  document.addEventListener('mousedown', function (e) { if (!e.target.closest('#gs')) { closeDrop(); if (!gsIn.value) gsTop.classList.remove('searching'); } });
+  gsIn.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); if (dropOpen() && gsIn.value) { gsIn.value = ''; doSearch(); } else endSearch(true); }
     else if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
-      e.preventDefault(); sel = Math.max(0, Math.min(res.length - 1, sel + (e.key === 'ArrowDown' ? 1 : -1)));
-      [].forEach.call(document.querySelectorAll('.sr'), function (el, k) { el.classList.toggle('sel', k === sel); if (k === sel) el.scrollIntoView({ block: 'nearest' }); });
-    } else if (e.key === 'Enter') pick(sel);
+      e.preventDefault(); if (!dropOpen()) { doSearch(); return; }
+      sel = Math.max(0, Math.min(res.length - 1, sel + (e.key === 'ArrowDown' ? 1 : -1)));
+      [].forEach.call(gsRes.querySelectorAll('.sr'), function (el, k) { el.classList.toggle('sel', k === sel); if (k === sel) el.scrollIntoView({ block: 'nearest' }); });
+    } else if (e.key === 'Enter') { e.preventDefault(); pick(sel); }
+  });
+  document.addEventListener('keydown', function (e) {
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') { e.preventDefault(); focusSearch(); return; }
+    if (e.key === '/' && !/INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName) && $('#modal').hidden) { e.preventDefault(); focusSearch(); }
   });
 
   // ---------------------------------------------------------------- 테마·라우터
@@ -1424,14 +1436,14 @@
   });
   $('#menuBtn').addEventListener('click', function () { $('#side').classList.toggle('open'); });
   $('#side').addEventListener('click', function (e) { if (e.target.closest('a')) this.classList.remove('open'); });
-  $('#ver').textContent = ((M.version || {}).head || '') + ' · 라이브 ' + ((M.version || {}).live || '?') + '차';
+  $('#ver').textContent = '라이브 ' + liveLabel() + ((M.version || {}).live_date ? ' · ' + M.version.live_date : '');
   $('#sideFoot').innerHTML = esc(verText()) + '<br>펫 ' + P.length + ' · 아이템 ' + IT.length;
   var scrolls = {};
   function route() {
     var hs = location.hash.replace(/^#\/?/, ''), qi = hs.indexOf('?'), path = qi >= 0 ? hs.slice(0, qi) : hs, params = {};
     if (qi >= 0) hs.slice(qi + 1).split('&').forEach(function (kv) { var p = kv.split('='); params[decodeURIComponent(p[0])] = decodeURIComponent(p[1] || ''); });
     var parts = path.split('/'), r = parts[0] || 'home';
-    FIGS.length = 0; NPCS.length = 0; $('#modal').hidden = true; avStop();
+    FIGS.length = 0; NPCS.length = 0; $('#modal').hidden = true; avStop(); closeDrop();
     [].forEach.call(document.querySelectorAll('.side a'), function (a) { var d = a.getAttribute('data-r'); a.classList.toggle('on', d === r || (d + '') === ({ hunt: 'hunts', pet: 'pets', item: 'items', ride: 'rides', town: 'start' })[r]); });
     try {
       if (r === 'home') pageHome(); else if (r === 'start') pageStart(); else if (r === 'hunts') pageHunts(params); else if (r === 'hunt') pageHunt(parts[1]);

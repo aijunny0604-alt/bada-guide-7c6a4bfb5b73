@@ -22,8 +22,16 @@ h1{font-size:22px;margin:0 0 4px} h2{font-size:18px;margin:22px 0 10px} h3{font-
 code,kbd{font-family:Consolas,"D2Coding",monospace;font-size:12.5px;background:var(--chip);border-radius:4px;padding:1px 5px}
 .top{position:fixed;top:0;left:0;right:0;height:var(--top);display:flex;align-items:center;gap:10px;padding:0 14px;background:var(--panel);border-bottom:1px solid var(--line);z-index:20}
 .brand{font-size:17px;color:var(--text);white-space:nowrap} .brand b{color:var(--acc)}
-.search-trigger{flex:1;max-width:460px;display:flex;justify-content:space-between;align-items:center;gap:8px;height:34px;padding:0 10px;border:1px solid var(--line);border-radius:8px;background:var(--panel2);color:var(--muted);cursor:pointer;font:inherit;min-width:0}
-.search-trigger span{overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.gsearch{position:relative;flex:1;max-width:620px;min-width:0;display:flex;align-items:center}
+.gsearch input{flex:1;min-width:0;width:100%;height:36px;padding:0 64px 0 12px;border:1px solid var(--line);border-radius:8px;background:var(--panel2);color:var(--text);font:inherit;font-size:14.5px;outline:none}
+.gsearch input:focus{border-color:var(--acc);background:var(--panel);box-shadow:0 0 0 3px var(--acc2)}
+.gsearch input::-webkit-search-cancel-button{margin-right:2px}
+.gs-kbd{position:absolute;right:8px;top:50%;transform:translateY(-50%);pointer-events:none;color:var(--muted)}
+.gsearch input:focus ~ .gs-kbd,.gsearch input:not(:placeholder-shown) ~ .gs-kbd{display:none}
+.gs-icon{display:none;flex:none}
+.gs-drop{position:absolute;top:calc(100% + 6px);left:0;width:max(100%,560px);max-width:calc(100vw - 28px);background:var(--panel);border:1px solid var(--line);border-radius:12px;box-shadow:0 10px 28px rgba(16,24,40,.18),0 2px 6px rgba(16,24,40,.08);z-index:40}
+.gs-drop[hidden]{display:none}
+.gs-head{padding:6px 14px;border-bottom:1px solid var(--line);position:sticky;top:0;background:var(--panel)}
 .ver{font-size:12px;color:var(--muted);white-space:nowrap;margin-left:auto}
 .icon-btn{border:1px solid var(--line);background:var(--panel2);color:var(--text);border-radius:8px;height:34px;min-width:34px;cursor:pointer;font-size:16px}
 .menu-btn{display:none}
@@ -37,7 +45,18 @@ main{margin-left:var(--side);padding:calc(var(--top) + 18px) 22px 60px}
   .menu-btn{display:inline-block} .ver{display:none}
   .side{transform:translateX(-100%);transition:transform .15s} .side.open{transform:none;box-shadow:0 0 0 100vmax rgba(0,0,0,.35)}
   main{margin-left:0;padding:calc(var(--top) + 12px) 16px 60px}
-  .search-trigger kbd{display:none}
+  .gs-kbd{display:none} .gsearch input{padding-right:10px}
+}
+@media (max-width:600px){
+  .gsearch{flex:0 0 auto;margin-left:auto;position:static}
+  .gsearch input{display:none}
+  .gs-icon{display:inline-block}
+  .top.searching .brand,.top.searching .menu-btn,.top.searching #themeBtn{display:none}
+  .top.searching .gsearch{flex:1;margin-left:0;gap:8px}
+  .top.searching .gsearch input{display:block;font-size:16px}
+  .top.searching .gs-icon{order:2}
+  .gs-drop{position:fixed;top:var(--top);left:0;right:0;width:auto;max-width:none;border-radius:0 0 12px 12px;border-left:0;border-right:0}
+  .gsearch .gs-drop{max-height:calc(100vh - var(--top) - 24px)}
 }
 .panel{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px 16px;box-shadow:var(--shadow);margin-bottom:14px}
 .grid{display:grid;gap:12px}
@@ -87,8 +106,6 @@ tr.hl td{background:var(--acc2)}
 .ellip{overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
 .overlay{position:fixed;inset:0;background:rgba(10,14,22,.5);z-index:50;display:flex;align-items:flex-start;justify-content:center;padding:6vh 12px}
 .overlay[hidden]{display:none}
-.search-box{width:min(680px,100%);background:var(--panel);border-radius:14px;border:1px solid var(--line);overflow:hidden}
-.search-box input{width:100%;height:48px;border:0;border-bottom:1px solid var(--line);padding:0 16px;font:inherit;font-size:16px;background:var(--panel);color:var(--text);outline:none}
 .search-res{max-height:62vh;overflow:auto}
 .sr{display:flex;gap:10px;align-items:center;padding:7px 14px;cursor:pointer;border-bottom:1px solid var(--line)}
 .sr:hover,.sr.sel{background:var(--acc2)}

@@ -823,9 +823,9 @@
     }
     if (t === 'fk') return '<b>화염의 기사 세트</b> <span class="muted">T6 사냥터 전투 0.2% · T5/T6 보스 5% · 최종 보스 15%</span>';
     if (t === 'cons') return '<b>사냥 전투 소모품 드롭</b> <span class="muted">' + s.bands.map(function (b) { return ((H.cons || [])[b] || {}).label; }).join(', ') + ' (모든 사냥 층)</span>';
-    if (t === 'stone') return '<b>마석 드롭(14.2 준비·미배포)</b> <span class="muted">' + esc(s.tier) + ' · 사냥 전투 승리마다, 그 전투 적 최고 레벨</span><div class="small">' + s.bands.map(esc).join(' · ') + '</div>';
-    if (t === 'stoneboss') return '<b>보스 처치 마석 보상(14.2 준비·미배포)</b> <span class="muted">' + esc(s.tier) + '</span><div class="small">' + s.bands.map(esc).join(' · ') + '</div>';
-    if (t === 'stonesyn') return '<b>마석 합성(14.2 준비·미배포)</b> <span class="muted">' + esc(s.tier) + ' 마석 3개 → 이 등급 1개 · [마석] 창 또는 [마석 합성 칸 칸 칸]</span>';
+    if (t === 'stone') return '<b>마석 드롭</b> <span class="muted">' + esc(s.tier) + ' · 사냥 전투 승리마다, 그 전투 적 최고 레벨</span><div class="small">' + s.bands.map(esc).join(' · ') + '</div>';
+    if (t === 'stoneboss') return '<b>보스 처치 마석 보상</b> <span class="muted">' + esc(s.tier) + '</span><div class="small">' + s.bands.map(esc).join(' · ') + '</div>';
+    if (t === 'stonesyn') return '<b>마석 합성</b> <span class="muted">' + esc(s.tier) + ' 마석 3개 → 이 등급 1개 · [마석] 창 또는 [마석 합성 칸 칸 칸]</span>';
     if (t === 'setdrop') return '<b>세트 드롭</b> ' + (s.hid ? huntLink(s.hid) : esc(s.fname)) + ' <span class="muted">' + s.pm / 10 + '%</span>';
     if (t === 'mob') return '<b>몹 드롭</b> ' + esc(s.mob) + ' <span class="muted">Lv.' + s.lv + ' · 값 ' + s.p + '</span> @ ' + (s.hid ? huntLink(s.hid) : esc(s.fname) + ' (' + s.floor + ')');
     if (t === 'shop' || t === 'shop80') return '<b>' + (t === 'shop80' ? '8.0 상인' : '상점') + '</b> ' + esc(s.npc) + ' <span class="muted">· ' + esc(s.fname) + ' (' + s.x + ',' + s.y + ')</span> ' + warp(s.floor, s.x, s.y + 1);

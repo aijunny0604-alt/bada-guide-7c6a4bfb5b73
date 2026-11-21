@@ -27,7 +27,13 @@
     return '<span class="spr" style="width:' + Math.round(w * s) + 'px;height:' + Math.round(h * s) + 'px"><i style="width:' + w + 'px;height:' + h +
       'px;background:url(img/' + file + ') -' + c[1] + 'px -' + c[2] + 'px;transform:scale(' + s + ')"></i></span>';
   }
-  function petImg(img, box, sc) { return spr('cr', 'a' + img, box, sc); }
+  // 움직이는 그림: 펫·몹 그림 번호마다 GIF(media/pet, 게임 팔레트·투명·서기/걷기 앞쪽, 같은 그림은 한 번만)가 있으면 그것, 없으면 정지 그림
+  var GIFIMG = {}; P.forEach(function (p) { if (p.gif && !GIFIMG[p.img]) GIFIMG[p.img] = p.gif; });
+  function gifTag(g, box, sc, alt) {
+    var s = Math.min(sc || 1, box ? box / g[1] : 9, box ? box / g[2] : 9);
+    return '<img class="gif" loading="lazy" decoding="async" src="' + g[0] + '" width="' + Math.max(1, Math.round(g[1] * s)) + '" height="' + Math.max(1, Math.round(g[2] * s)) + '" alt="' + esc(alt || '') + '">';
+  }
+  function petImg(img, box, sc) { var g = GIFIMG[img]; return g ? gifTag(g, box, sc) : spr('cr', 'a' + img, box, sc); }
   function itemImg(img, box, sc) { return spr('ic', 'i' + img, box, sc); }
   function copyBtn(text, label) { return '<button class="copy" data-copy="' + esc(text) + '" title="복사">' + esc(label || text) + '</button>'; }
   function warp(f, x, y) { return copyBtn('[gm warp ' + f + ' ' + x + ' ' + y + ']'); }
@@ -340,7 +346,7 @@
     var lv = store('lv') || '';
     var cards = [['#/start', '시작하기', '접속·명령어·포탈', (GD.cmds || []).length + '개 명령'], ['#/hunts', '사냥터·던전', '레벨대·경험치·몹·보스', c.hunts],
       ['#/quests', '퀘스트·NPC', '원작 이벤트·교환·8.0 NPC', c.quests], ['#/pets', '펫 도감', 'petmake 번호·속성·출현', c.pets],
-      ['#/items', '아이템 도감', 'additem 번호·세트·얻는 곳', c.items], ['#/rides', '탑승', '몸 12종 탑승 그림', c.rides], ['#/updates', '업데이트 기록', 'CHANGELOG', c.changelog]];
+      ['#/items', '아이템 도감', 'additem 번호·세트·얻는 곳', c.items], ['#/levels', '레벨별 성장 가이드', '사냥터·장비·퀘스트·펫', (LV.bands || []).length + '구간'], ['#/petget', '펫 구하기', '야생·퀘스트·교환·선물', P.filter(petOk).length + '종'], ['#/rides', '탑승', '몸 12종 탑승 그림', c.rides], ['#/updates', '업데이트 기록', 'CHANGELOG', c.changelog]];
     var h = '<div class="banner"><h1>뿌이의 스톤에이지 <span class="muted small">공략 가이드</span></h1><div class="muted">' + esc(verText()) + '<br>그림: ' + esc((M.runtime || '').split('/').slice(-2).join('/')) +
       ' · 이 페이지는 <code>python -I tools/make-guide-site.py</code>로 다시 만듭니다(서버 자료·문서에서 자동 생성).</div></div>';
     h += '<div class="grid home-cards">' + cards.map(function (x) { return '<div class="card home-card" data-go="' + x[0] + '"><div>' + x[1] + '</div><b>' + esc(x[3] == null ? '' : x[3]) + '</b><div class="muted small">' + x[2] + '</div></div>'; }).join('') + '</div>';
@@ -831,12 +837,12 @@
     if (t === 'shop' || t === 'shop80') return '<b>' + (t === 'shop80' ? '8.0 상인' : '상점') + '</b> ' + esc(s.npc) + ' <span class="muted">· ' + esc(s.fname) + ' (' + s.x + ',' + s.y + ')</span> ' + warp(s.floor, s.x, s.y + 1);
     if (t === 'quest') { var q = questById[s.no]; return '<b>퀘스트 보상</b> <a href="#/quests/' + s.no + '">#' + s.no + ' ' + esc(q ? q.title : '') + '</a>' + (s.rand ? ' <span class="muted">(무작위 중 하나)</span>' : '') + (q && q.prev.length ? ' <span class="muted small">선행 ' + q.prev.map(function (p) { return '#' + p; }).join('→') + '</span>' : ''); }
     if (t === 'exchange') return '<b>교환 NPC</b> ' + esc(s.npc) + ' <span class="muted">· ' + esc(s.fname) + ' (' + s.x + ',' + s.y + ')</span> ' + warp(s.floor, s.x, s.y + 1) + (s.rand ? ' <span class="muted">(무작위)</span>' : '');
-    if (t === 'craft') return '<b>가공·제작</b> ' + esc(s.npc) + ' <span class="muted">· ' + esc(s.fname) + '</span> ' + warp(s.floor, s.x, s.y + 1) + '<div class="small">재료 ' + thingIcons(s.need.map(function (n) { return { k: 'item', id: n[0], name: n[1], n: n[2] }; })) + (s.gold ? ' + ' + esc(s.gold) + ' 스톤' : '') + '</div>';
+    if (t === 'craft') return '<b>' + (s.win ? '제작 창' : '가공·제작') + '</b> ' + esc(s.npc) + ' <span class="muted">· ' + esc(s.fname) + '</span> ' + warp(s.floor, s.x, s.y + 1) + '<div class="small">재료 ' + thingIcons(s.need.map(function (n) { return { k: 'item', id: n[0], name: n[1], n: n[2] }; })) + (s.gold ? ' + ' + esc(s.gold) + ' 스톤' : '') + '</div>';
     return esc(JSON.stringify(s));
   }
   function srcShort(s) {
     return { tier: '희귀 드롭 T' + (s.tier + 1), boss: 'T' + (s.tier + 1) + ' 보스 보상', fk: '화염의 기사(T6·보스)', cons: '사냥 소모품 드롭', setdrop: '세트 드롭 ' + (s.fname || ''), mob: '몹 드롭: ' + (s.mob || ''),
-      shop: '상점: ' + (s.npc || ''), shop80: '8.0 상인: ' + (s.npc || ''), quest: '퀘스트 #' + s.no, exchange: '교환: ' + (s.npc || ''), craft: '제작: ' + (s.npc || ''), stone: '마석 드롭(준비)', stoneboss: '보스 마석(준비)', stonesyn: '마석 합성(준비)' }[s.t] || s.t;
+      shop: '상점: ' + (s.npc || ''), shop80: '8.0 상인: ' + (s.npc || ''), quest: '퀘스트 #' + s.no, exchange: '교환: ' + (s.npc || ''), craft: (s.win ? '제작 창: ' : '제작: ') + (s.npc || ''), stone: '마석 드롭(준비)', stoneboss: '보스 마석(준비)', stonesyn: '마석 합성(준비)' }[s.t] || s.t;
   }
   function getSection(list, more, gm) {
     if (!list.length) return '<div class="panel"><h3>얻는 방법</h3><p>GM 전용 — 서버 자료에서 드롭·상점·퀘스트·교환 경로를 찾지 못했습니다. ' + gm + '</p></div>';
@@ -872,9 +878,9 @@
     if (params.tiers) h += tierCriteria();
     h += '<div class="toolbar"><input type="search" id="pq" placeholder="이름·번호·기술" value="' + esc(pState.q) + '">' +
       '<select id="pf">' + opts(fams, pState.fam, '계열 전체') + '</select><select id="pe">' + opts([['지', '지'], ['수', '수'], ['화', '화'], ['풍', '풍']], pState.el, '속성 전체') + '</select>' +
-      '<select id="pg2">' + opts(['야생', '보스', '퀘스트', 'GM 전용'], pState.get, '얻는 방법 전체') + '</select><select id="po">' + opts(orgs, pState.org, '출신 전체') + '</select>' +
+      '<select id="pg2">' + opts(['야생', '퀘스트', '교환', '선물 상자', '환생 선물', '야생(포획 불가)', '보스', 'GM 전용'], pState.get, '얻는 방법 전체') + '</select><select id="po">' + opts(orgs, pState.org, '출신 전체') + '</select>' +
       '<select id="pb">' + opts([['a', '출현 Lv~30'], ['b', '31~80'], ['c', '81~150'], ['d', '151+'], ['n', '야생 없음']], pState.band, '출현 레벨 전체') + '</select>' +
-      '<select id="ps">' + opts([['id', '번호순'], ['name', '이름순'], ['sc', '등급 점수(S급 Lv100 합)'], ['gt', 'S급 레벨당 성장 합'], ['gr', '포획 성장률(LVUPPOINT)'], ['sum', '기본치 합'], ['g0', 'S급 체력 성장'], ['g1', 'S급 공격 성장'], ['g2', 'S급 방어 성장'], ['g3', 'S급 순발 성장'], ['hp', '체력 기본치'], ['atk', '공격 기본치'], ['def', '방어 기본치'], ['spd', '순발 기본치'], ['mlv', '출현 레벨']], pState.sort, '정렬') + '</select><span class="count" id="pn"></span></div>' +
+      '<select id="ps">' + opts([['id', '번호순'], ['name', '이름순'], ['sc', '등급 점수(S급 Lv100 합)'], ['gt', 'S급 레벨당 성장 합'], ['gr', '포획 성장률(LVUPPOINT)'], ['sum', '기본치 합'], ['g0', 'S급 체력 성장'], ['g1', 'S급 공격 성장'], ['g2', 'S급 방어 성장'], ['g3', 'S급 순발 성장'], ['hp', '체력 기본치'], ['atk', '공격 기본치'], ['def', '방어 기본치'], ['spd', '순발 기본치'], ['mlv', '출현 레벨']], pState.sort, '정렬') + '</select><span class="count" id="pn"></span> <a class="small" href="#/petget">펫 구하기(얻는 방법 전체) ›</a></div>' +
       '<div class="grid cards" id="pg"></div><button class="more" id="pm">더 보기</button>';
     app.innerHTML = h;
     function band(p) { var l = p.mlv; return l == null ? 'n' : l <= 30 ? 'a' : l <= 80 ? 'b' : l <= 150 ? 'c' : 'd'; }
@@ -964,8 +970,8 @@
       p.spots.map(function (w) {
         var cx = Math.round((w.rect[0] + w.rect[2]) / 2), cy = Math.round((w.rect[1] + w.rect[3]) / 2), hx = w.hid && huntById[w.hid];
         return '<tr' + (w.lo <= 1 ? ' class="hl"' : '') + '><td>' + esc(w.fn) + ' <span class="muted small">(' + w.f + ')</span>' + (hx ? '<div class="small">' + huntLink(w.hid) + '</div>' : '') + '</td><td class="small">' + w.rect.join(',').replace(/^(\d+),(\d+),/, '$1,$2~') + '</td><td class="num">' + w.lo + (w.hi !== w.lo ? '~' + w.hi : '') +
-          '</td><td class="num">' + w.rate + '%</td><td>' + (w.c ? '<span class="tag ride">가능</span>' : '<span class="tag">불가</span>') + '</td><td>' + warp(w.f, cx, cy) + (hx && hx.route ? ' <a href="#/hunt/' + w.hid + '">경로</a>' : '') + '</td></tr>';
-      }).join('') + '</table></div><p class="muted small">출현 비율 = 그 조우 구역에서 이 몹이 뽑힐 비율(그룹 가중치 × 그룹 안 비율). Lv1 출현은 강조 표시. ' + (p.nspots > p.spots.length ? '외 ' + (p.nspots - p.spots.length) + '곳' : '') + '</p></div>';
+          '</td><td class="num">' + w.rate + '%' + (w.need ? '<div class="small warn">' + esc(w.need[1]) + ' 소지 시</div>' : '') + (w.noneed ? '<div class="small warn">' + esc(w.noneed[1]) + ' 없을 때</div>' : '') + '</td><td>' + (w.c ? '<span class="tag ride">가능</span>' : '<span class="tag">불가</span>') + '</td><td>' + warp(w.f, cx, cy) + (hx && hx.route ? ' <a href="#/hunt/' + w.hid + '">경로</a>' : '') + '</td></tr>';
+      }).join('') + '</table></div><p class="muted small">출현 비율 = 그 조우 구역에서 이 몹이 뽑힐 비율(그룹 가중치 × 그룹 안 비율, 0%인 무리는 서버가 뽑지 않아 뺌). Lv1 출현은 강조 표시. ' + (p.nspots > p.spots.length ? '외 ' + (p.nspots - p.spots.length) + '곳' : '') + '</p></div>';
   }
   function statBars(p) {
     var lab = ['체력', '공격', '방어', '순발'], S = (p.roll || {}).s, mx = M.l100max || [600, 600, 600, 600];
@@ -1115,9 +1121,11 @@
     p.wild.forEach(function (w) { ways.push({ lv: w.c ? w.lo : 999, html: '<b>' + (w.c ? '야생 포획' : '야생 출현(포획 불가)') + '</b> ' + (w.hid ? huntLink(w.hid) : esc(w.fn) + ' <span class="muted">(' + w.f + ')</span>') + ' <span class="muted">Lv.' + w.lo + (w.hi !== w.lo ? '~' + w.hi : '') + '</span>' + (w.hid && huntById[w.hid] && huntById[w.hid].entry ? ' ' + warp(huntById[w.hid].entry[0], huntById[w.hid].entry[1], huntById[w.hid].entry[2]) : '') }); });
     (p.q || []).forEach(function (s) { ways.push({ lv: (questById[s.no] || {}).lv || 0, html: srcHtml(s) }); });
     if (p.c.indexOf('보스') >= 0) ways.push({ lv: 500, html: '<b>던전 보스</b> — 포획 불가, GM으로만 만들 수 있습니다.' });
+    (p.gift || []).forEach(function (g) { ways.push({ lv: g.ok ? 300 : 900, html: '<b>선물 상자</b> ' + icoItem(g.id, g.n) + ' <span class="muted small">쓰면 들어 있는 펫 중 하나' + (g.ok ? '' : ' · 상자는 GM 전용') + '</span>' }); });
+    if ((p.reb || []).length) ways.push({ lv: 80, html: '<b>환생 선물</b> ' + p.reb.join('·') + '번째 환생 때 정령왕이 줌 <span class="muted small">(펫 칸이 비어 있어야 함)</span> <a href="#/levels?b=reb">환생 ›</a>' });
     ways.sort(function (a, b) { return a.lv - b.lv; });
     h += '<div class="col-stack"><div class="panel"><h3>얻는 방법</h3>' + (ways.length ? '<div class="rec"><span class="tag ride">추천 루트</span> ' + ways[0].html + '</div><ol class="srcs">' + ways.slice(1).map(function (w) { return '<li>' + w.html + '</li>'; }).join('') + '</ol>' : '<p>GM 전용(야생·퀘스트 경로 없음)</p>') +
-      '<p class="muted small">GM: ' + copyBtn('[gm petmake ' + p.id + ' 1]') + '</p></div>' + (p.av ? avHtml(p, rr) : '') + '</div></div>';
+      ((p.chk || []).length ? '<p class="small warn">점검: ' + p.chk.map(esc).join(' / ') + '</p>' : '') + '<p class="muted small">GM: ' + copyBtn('[gm petmake ' + p.id + ' 1]') + ' · <a href="#/petget">펫 구하기 전체 ›</a></p></div>' + (p.av ? avHtml(p, rr) : '') + '</div></div>';
     h += spotsHtml(p);
     var w0 = p.wild.filter(function (w) { return w.c && w.hid; })[0];
     if (w0) { var x = huntById[w0.hid]; if (x && x.mm) h += '<h2>잡으러 가는 곳: ' + esc(x.label) + '</h2>' + (x.route ? routeHtml(x.route, halfW(2)) : '') + '<div class="figs">' + (x.scenes || []).slice(0, 1).map(function (s) { return sceneHtml(s.id, s.marks.map(function (m, k) { return { x: m.x, y: m.y, k: m.k, t: m.t, n: k + 1 }; }), s.title, bigScale(2)); }).join('') + '</div>'; }
@@ -1242,6 +1250,143 @@
   function pageCourse() {
     app.innerHTML = '<h1>코스 공략 <span class="muted small">레벨 구간별 성장 루트</span></h1><p class="muted">경험치표(사냥터별 레벨업까지 전투 수)·드롭 등급·퀘스트 분류·펫 등급에서 자동으로 고른 추천입니다. 혼자·펫 5마리 기준.</p>' +
       '<div class="chips">' + STAGES.map(function (s, k) { return '<a class="chip" href="#/course?s=' + k + '">' + (k + 1) + '단계 Lv.' + s[0] + '~' + s[1] + '</a>'; }).join('') + '</div>' + STAGES.map(function (s, k) { return '<div id="st' + k + '">' + stageHtml(k) + '</div>'; }).join('');
+  }
+
+  // ---------------------------------------------------------------- 레벨별 성장 가이드 (data/levels.js, make-guide-site.py build_levels)
+  var LV = SA.levels || { bands: [], free: [], reb: {} };
+  var SLOT_KO = [['w', '무기'], ['h', '투구'], ['a', '갑옷'], ['x', '장신구']];
+  function srcLine(s) {
+    var t = s.t, loc = function () { return s.fname ? ' <span class="muted small">· ' + esc(s.fname) + (s.x != null ? ' (' + s.x + ',' + s.y + ')' : '') + '</span>' + (s.floor && s.x != null ? ' ' + warp(s.floor, s.x, s.y + 1) : '') : ''; };
+    if (t === 'shop' || t === 'shop80') return '<span class="tag ride">상점</span> ' + esc(s.npc) + loc();
+    if (t === 'mob') return '<span class="tag boss">드롭</span> ' + esc(s.mob) + ' <span class="muted small">Lv.' + s.lv + ' · ' + s.p + '%</span> @ ' + (s.hid ? huntLink(s.hid) : esc(s.fname));
+    if (t === 'craft') return '<span class="tag new">' + (s.win ? '제작 창' : '가공') + '</span> ' + esc(s.npc) + loc() + '<div class="small">재료 ' + thingIcons(s.need.map(function (n) { return { k: 'item', id: n[0], name: n[1], n: n[2] }; })) + (s.gold ? ' + ' + esc(s.gold) + ' 스톤' : '') + '</div>';
+    if (t === 'quest') { var q = questById[s.no]; return '<span class="tag legend">퀘스트</span> <a href="#/quests/' + s.no + '">#' + s.no + ' ' + esc(q ? q.title : '') + '</a>' + (s.rand ? ' <span class="muted small">(무작위)</span>' : ''); }
+    if (t === 'exchange') return '<span class="tag v80">교환</span> ' + esc(s.npc) + loc();
+    return '<span class="tag">' + esc(srcShort(s)) + '</span>' + (t === 'tier' || t === 'boss' ? ' <span class="muted small">' + ({ tier: '사냥 전투 ' + s.p + '%', boss: '보스 확정 보상' })[t] + '</span>' : '');
+  }
+  function gearCard(id) {
+    var i = itemById[id];
+    if (!i) return '';
+    var order = { shop: 0, shop80: 0, craft: 1, quest: 2, exchange: 3, mob: 4, setdrop: 5, tier: 6, boss: 7 }, src = i.src.slice().sort(function (a, b) { return (order[a.t] == null ? 9 : order[a.t]) - (order[b.t] == null ? 9 : order[b.t]) || (b.p || 0) - (a.p || 0); });
+    var seen = {}, pick = [];
+    src.forEach(function (s) { var k = s.t === 'mob' ? 'mob' + s.mob : s.t + (s.npc || '') + (s.no || ''); if (!seen[k] && pick.length < 4) { seen[k] = 1; pick.push(s); } });
+    return '<div class="card gear-card"><div class="idrow"><a class="ico" href="#/item/' + i.id + '">' + itemImg(i.img, 44, 2) + '<b>' + esc(i.n) + '</b></a>' + copyBtn('[gm additem ' + i.id + ' 1]', 'additem') + '</div>' +
+      '<div class="small muted">' + esc(i.tn) + ' · 필요 Lv.' + (i.lv || 0) + (i.st ? ' · ' + esc(i.st) : '') + (i.s && setBySuit[i.s] ? ' · <a href="#/items?tab=sets">' + esc(setBySuit[i.s].name) + '</a>' : '') + '</div>' +
+      '<ol class="srcs small">' + pick.map(function (s) { return '<li>' + srcLine(s) + '</li>'; }).join('') + '</ol>' + (i.src.length > pick.length ? '<div class="small"><a href="#/item/' + i.id + '">얻는 곳 ' + i.src.length + '가지 모두 보기 ›</a></div>' : '') + '</div>';
+  }
+  function questStartNpc(q) { var st = (q.start || [])[0] || (q.finish || [])[0]; return st ? '<span class="lv-npc">' + npcPic(st.npc, 56) + '<span>' + npcPos(st.npc) + '</span></span>' : ''; }
+  function lvQuestRow(x) {
+    var q = questById[x.no]; if (!q) return '';
+    return '<tr class="click" data-go="#/quests/' + q.no + '"><td><a href="#/quests/' + q.no + '"><b>#' + q.no + ' ' + esc(q.title) + '</b></a><div class="muted small">' + esc(q.region || '') + (q.season ? ' · <span class="tag legend">계절 이벤트</span>' : '') + (q.rep ? ' · 반복' : '') + '</div></td>' +
+      '<td class="num">' + (x.lv ? (x.inf ? '약 ' : '') + 'Lv.' + x.lv : '-') + '</td><td class="small">' + questStartNpc(q) + '</td><td class="small">' + (q.rewards && q.rewards.length ? thingIcons(q.rewards.slice(0, 5)) : '<span class="muted">-</span>') + '</td></tr>';
+  }
+  function lvBandHtml(b) {
+    var h = '<div class="panel stage" id="lb' + b.a + '"><h2 style="margin-top:0">Lv.' + b.a + '~' + b.b + ' <span class="muted small">' + esc(b.t) + '</span></h2>';
+    h += '<h3>추천 사냥터</h3><p class="muted small">샴기르 고대 신전 창에서 고르는 이름 그대로입니다. 권장 레벨이 이 구간과 많이 겹치고 레벨업이 빠른 순.</p><div class="tbl-wrap"><table><tr><th>사냥터</th><th class="num">권장 Lv</th><th>가는 길(고대 신전 창)</th><th class="num">전투/레벨업</th><th>바로 가기</th></tr>' +
+      b.hunts.map(function (x) {
+        var hx = huntById[x.id]; if (!hx) return '';
+        return '<tr><td>' + huntLink(x.id) + (hx.bosses.length ? ' <span class="tag boss">보스</span>' : '') + (hx.tier != null ? ' <span class="tag legend">희귀 T' + (hx.tier + 1) + '</span>' : '') + '</td><td class="num">' + x.lv[0] + '~' + x.lv[1] + '</td><td class="small">' + esc(x.path) + '</td><td class="num">' + (hx.battles == null ? '-' : hx.battles) + '</td><td>' + (hx.entry ? warp(hx.entry[0], hx.entry[1], hx.entry[2]) : '') + '</td></tr>';
+      }).join('') + '</table></div>';
+    h += '<h3>추천 장비</h3><p class="muted small">필요 레벨이 이 구간 이하이고 이 구간까지 얻을 수 있는 것 중 능력이 높은 순(무기는 종류마다 2개까지). 얻는 곳: 상점·제작 → 퀘스트·교환 → 몹 드롭(확률) → 희귀 드롭 순.</p>';
+    SLOT_KO.forEach(function (s) { var l = (b.gear || {})[s[0]] || []; if (l.length) h += '<div class="sub-h"><b>' + s[1] + '</b></div><div class="grid gear-grid">' + l.map(gearCard).join('') + '</div>'; });
+    if ((b.sets || []).length) h += '<div class="sub-h"><b>세트</b></div><p>' + b.sets.map(function (su) { var s = setBySuit[su]; return s ? '<a href="#/items?tab=sets">' + esc(s.name) + '</a> <span class="muted small">Lv.' + s.lv + ' · ' + s.ids.length + '부위</span>' : ''; }).join(' · ') + '</p>';
+    h += '<h3>관련 퀘스트 <span class="muted small">' + b.quests.length + '개</span></h3>' + (b.quests.length ? '<div class="tbl-wrap"><table><tr><th>퀘스트</th><th class="num">레벨</th><th>시작 NPC</th><th>보상</th></tr>' + b.quests.map(lvQuestRow).join('') + '</table></div><p class="muted small">레벨 = 퀘스트 조건의 레벨. "약"은 조건이 없어 NPC가 있는 층의 몹 레벨이나 보상 장비 레벨로 짐작한 값입니다.</p>' : '<p class="muted">이 구간에 맞춘 퀘스트는 없습니다. 아래 <a href="#/levels?b=free">레벨 무관 퀘스트</a>를 보세요.</p>');
+    h += '<h3>잡을 만한 펫 <span class="muted small">이 구간에서 잡을 수 있는 ' + b.npets + '종 중 등급 높은 순</span></h3><div class="tbl-wrap"><table><tr><th>펫</th><th>등급</th><th>잡는 곳</th><th class="num">레벨</th><th class="num">출현</th><th>가기</th></tr>' +
+      b.pets.map(function (x) {
+        var p = petById[x.id]; if (!p) return '';
+        return '<tr><td>' + icoPet(p.id) + ' <span class="small">' + elemHtml(p.el) + '</span></td><td>' + tierBadge(p.tier) + '</td><td>' + (x.hid ? huntLink(x.hid) : esc(x.fn)) + ' <span class="muted small">(' + x.f + ')</span>' + (x.need ? '<div class="small warn">' + esc(x.need[1]) + ' 가지고 있을 때만</div>' : '') + '</td><td class="num">' + x.lo + (x.hi !== x.lo ? '~' + x.hi : '') + '</td><td class="num">' + x.rate + '%</td><td>' + (x.hid && huntById[x.hid] && huntById[x.hid].entry ? warp(huntById[x.hid].entry[0], huntById[x.hid].entry[1], huntById[x.hid].entry[2]) : '') + '</td></tr>';
+      }).join('') + '</table></div><p class="small"><a href="#/petget?lv=' + b.a + '-' + b.b + '">이 레벨 구간 펫 모두 보기 (펫 구하기) ›</a></p>';
+    return h + '</div>';
+  }
+  function rebHtml() {
+    var r = LV.reb || {}, h = '<div class="panel stage" id="lbreb"><h2 style="margin-top:0">환생 · 초월 <span class="muted small">Lv.80 이후 언제든</span></h2>';
+    h += '<h3>정령왕(환생 NPC)</h3>' + ((r.npc || []).length ? '<ul>' + r.npc.map(function (n) { return '<li>' + npcPos(n) + '</li>'; }).join('') + '</ul>' : '<p class="muted">자료에서 찾지 못함</p>');
+    if ((r.gifts || []).length) h += '<h3>환생 선물 펫</h3><p class="muted small">환생할 때 펫 칸이 비어 있으면 받는 펫(정령왕 인자 Present, 출신 마을마다 순서가 다름). 6번째 환생은 모두 같은 펫.</p><div class="icons">' +
+      (function () { var by = {}, order = []; r.gifts.forEach(function (g) { if (!by[g[1]]) { by[g[1]] = []; order.push(g[1]); } if (by[g[1]].indexOf(g[0]) < 0) by[g[1]].push(g[0]); });
+        return order.map(function (id) { return petById[id] ? '<span class="ico">' + icoPet(id) + ' <span class="muted small">' + by[id].join('·') + '번째</span></span>' : ''; }).join(''); })() + '</div>';
+    var doc = (GD.docs || {})['환생'];
+    if (doc) h += '<h3>환생 방법</h3><div class="md">' + md(doc) + '</div>';
+    if ((r.hunts || []).length) h += '<h3>환생 뒤·초월 사냥터</h3><div class="tbl-wrap"><table><tr><th>사냥터</th><th class="num">몹 Lv</th><th>바로 가기</th></tr>' + r.hunts.map(function (id) { var x = huntById[id]; return x ? '<tr><td>' + huntLink(id) + ' <span class="muted small">' + esc(x.catname) + '</span></td><td class="num">' + x.lo + (x.hi !== x.lo ? '~' + x.hi : '') + '</td><td>' + (x.entry ? warp(x.entry[0], x.entry[1], x.entry[2]) : '') + '</td></tr>' : ''; }).join('') + '</table></div>';
+    return h + '<p class="rec">환생하면 Lv.1부터 다시 키우지만 능력치 보너스가 붙습니다. 처음 구간(Lv.1~20)의 사냥터부터 다시 돌면 됩니다. <a href="#/quests/g-trans">환생 공략</a></p></div>';
+  }
+  function pageLevels(params) {
+    var bands = LV.bands || [], sel = params.b || store('lvb') || String((bands[0] || {}).a || '');
+    if (params.b) store('lvb', params.b);
+    var h = '<h1>레벨별 성장 가이드 <span class="muted small">Lv.1 → 300 · 환생</span></h1><p class="muted">구간마다 <b>추천 사냥터</b>(고대 신전 창 이름), <b>추천 장비</b>(얻는 곳: 상점 위치·드롭 확률·제작 재료·퀘스트), <b>관련 퀘스트</b>, <b>잡을 만한 펫</b>을 모았습니다. 서버 자료(' + esc(verText()) + ')에서 자동으로 만듭니다.</p>';
+    h += '<div class="chips lv-chips">' + bands.map(function (b) { return '<a class="chip' + (String(b.a) === sel ? ' on' : '') + '" href="#/levels?b=' + b.a + '">Lv.' + b.a + '~' + b.b + '</a>'; }).join('') +
+      '<a class="chip' + (sel === 'reb' ? ' on' : '') + '" href="#/levels?b=reb">환생·초월</a><a class="chip' + (sel === 'free' ? ' on' : '') + '" href="#/levels?b=free">레벨 무관 퀘스트</a><a class="chip' + (sel === 'all' ? ' on' : '') + '" href="#/levels?b=all">전체 펼치기</a></div>';
+    if (sel === 'reb') h += rebHtml();
+    else if (sel === 'free') h += '<div class="panel stage"><h2 style="margin-top:0">레벨 무관 퀘스트 <span class="muted small">' + (LV.free || []).length + '개</span></h2><p class="muted small">조건 레벨이 없고 마을 NPC라 레벨을 짐작할 수 없는 퀘스트(아무 때나).</p><div class="tbl-wrap"><table><tr><th>퀘스트</th><th class="num">레벨</th><th>시작 NPC</th><th>보상</th></tr>' + (LV.free || []).map(function (no) { return lvQuestRow({ no: no }); }).join('') + '</table></div></div>';
+    else if (sel === 'all') h += bands.map(lvBandHtml).join('') + rebHtml();
+    else { var b = bands.filter(function (x) { return String(x.a) === sel; })[0] || bands[0]; if (b) h += lvBandHtml(b); }
+    app.innerHTML = h;
+  }
+
+  // ---------------------------------------------------------------- 펫 구하기 (얻는 방법 전부, 라이브 조우 기준)
+  var GET_ORDER = ['야생', '퀘스트', '교환', '선물 상자', '환생 선물', '야생(포획 불가)', '보스', 'GM 전용'];
+  var GETC = { '야생': 'ride', '퀘스트': 'legend', '교환': 'v80', '선물 상자': 'new', '환생 선물': 'new', '야생(포획 불가)': '', '보스': 'boss', 'GM 전용': 'boss' };
+  var gState = { q: '', el: '', how: '', st: '', lv: '', sort: 'lv', shown: 150 };
+  function petOk(p) { return p.get.some(function (g) { return g === '야생' || g === '퀘스트' || g === '교환' || g === '선물 상자' || g === '환생 선물'; }); }
+  function getTags(p) { return p.get.slice().sort(function (a, b) { return GET_ORDER.indexOf(a) - GET_ORDER.indexOf(b); }).map(function (g) { return '<span class="tag ' + (GETC[g] || '') + '">' + esc(g) + '</span>'; }).join(''); }
+  function petGetWhere(p) {
+    var out = [], w = p.spots.filter(function (s) { return s.c; })[0];
+    if (w) out.push('<b>' + (w.hid ? huntLink(w.hid) : esc(w.fn)) + '</b> <span class="muted small">(' + w.f + ') Lv.' + w.lo + (w.hi !== w.lo ? '~' + w.hi : '') + ' · ' + w.rate + '%</span>' + (w.need ? ' <span class="small warn">' + esc(w.need[1]) + ' 소지 시</span>' : '') + ' ' + warp(w.f, Math.round((w.rect[0] + w.rect[2]) / 2), Math.round((w.rect[1] + w.rect[3]) / 2)) + (p.nspots > 1 ? ' <span class="muted small">외 ' + (p.nspots - 1) + '곳</span>' : ''));
+    (p.q || []).slice(0, 2).forEach(function (s) { out.push(srcLine(s)); });
+    (p.gift || []).slice(0, 2).forEach(function (g) { out.push('<span class="tag new">선물 상자</span> ' + icoItem(g.id, g.n) + (g.ok ? '' : ' <span class="muted small">(상자도 GM 전용)</span>')); });
+    if ((p.reb || []).length) out.push('<span class="tag new">환생 선물</span> ' + p.reb.join('·') + '번째 환생 때 (정령왕)');
+    if (!out.length && !w && p.spots.length) { var z = p.spots[0]; out.push('<span class="muted">출현만 함(포획 불가): ' + (z.hid ? huntLink(z.hid) : esc(z.fn)) + ' Lv.' + z.lo + '</span>'); }
+    if (!out.length) out.push('<span class="muted">' + (p.get.indexOf('보스') >= 0 ? '던전 보스 — 잡을 수 없음' : '보통 방법으로 얻을 수 없음') + '</span> ' + copyBtn('[gm petmake ' + p.id + ' 1]'));
+    return out.join('<br>');
+  }
+  function pagePetGet(params) {
+    if (params.lv != null) gState.lv = params.lv;
+    if (params.how != null) gState.how = params.how;
+    var cnt = {}; GET_ORDER.forEach(function (g) { cnt[g] = P.filter(function (p) { return p.get.indexOf(g) >= 0; }).length; });
+    var nok = P.filter(petOk).length, nchk = P.filter(function (p) { return (p.chk || []).length; }).length;
+    var h = '<h1>펫 구하기 <span class="muted small">' + P.length + '종</span></h1><p class="muted">모든 펫의 얻는 방법을 <b>라이브 서버 조우표(encount → group1 → enemy)</b>에서 다시 계산했습니다. 출현 0%인 자리는 뺐고(그룹 가중치·확률 0은 서버가 뽑지 않음), "○○ 소지 시"는 그 아이템을 가졌을 때만 나오는 무리입니다. 조우가 바뀌면 공략을 다시 만들 때 자동으로 바뀝니다.</p>';
+    h += '<div class="grid home-cards">' + [['', '얻을 수 있음', nok], ['야생', '야생 포획', cnt['야생']], ['퀘스트', '퀘스트 보상', cnt['퀘스트']], ['교환', 'NPC 교환', cnt['교환']], ['선물 상자', '선물 상자(알)', cnt['선물 상자']], ['환생 선물', '환생 선물', cnt['환생 선물']], ['야생(포획 불가)', '출현만(포획 불가)', cnt['야생(포획 불가)']], ['GM 전용', '얻을 수 없음', cnt['GM 전용']]].map(function (c) {
+      return '<a class="card home-card" href="#/petget?how=' + encodeURIComponent(c[0]) + '"><div>' + c[1] + '</div><b>' + c[2] + '</b></a>';
+    }).join('') + '</div>';
+    h += '<div class="toolbar"><input type="search" id="gq" placeholder="이름·번호·사냥터" value="' + esc(gState.q) + '">' +
+      '<select id="ge">' + opts([['지', '지'], ['수', '수'], ['화', '화'], ['풍', '풍']], gState.el, '속성 전체') + '</select>' +
+      '<select id="gh">' + opts(GET_ORDER, gState.how, '얻는 방법 전체') + '</select>' +
+      '<select id="gs2">' + opts([['ok', '얻을 수 있는 펫만'], ['no', '얻을 수 없는 펫만'], ['chk', '점검 표시 있는 펫(' + nchk + ')']], gState.st, '상태 전체') + '</select>' +
+      '<select id="gl">' + opts((LV.bands || []).map(function (b) { return [b.a + '-' + b.b, '포획 Lv.' + b.a + '~' + b.b]; }).concat([['n', '야생 포획 없음']]), gState.lv, '포획 레벨 전체') + '</select>' +
+      '<select id="go">' + opts([['lv', '포획 레벨 낮은 순'], ['sc', '등급 점수 높은 순'], ['id', '번호순'], ['name', '이름순']], gState.sort, '정렬') + '</select><span class="muted small" id="gn"></span></div>' +
+      '<div class="tbl-wrap"><table class="pg-t"><thead><tr><th>펫</th><th>속성</th><th>등급</th><th>얻는 방법</th><th>어디서 · 어떻게</th></tr></thead><tbody id="gt"></tbody></table></div><button class="more" id="gm">더 보기</button>' +
+      '<p class="muted small">"얻을 수 없음" = 야생 포획·퀘스트·교환·선물 상자·환생 선물 어느 경로도 없는 펫(보스 포함). GM으로만 만들 수 있습니다. 점검 표시 = 옛 공략에 있던 0% 자리를 뺐거나, 이름 없는 층에만 나오는 펫.</p>';
+    app.innerHTML = h;
+    function list() {
+      var q = gState.q.toLowerCase().trim(), lr = gState.lv && gState.lv !== 'n' ? gState.lv.split('-').map(Number) : null;
+      var l = P.filter(function (p) {
+        if (gState.el && (p.el || '').indexOf(gState.el) < 0) return false;
+        if (gState.how && p.get.indexOf(gState.how) < 0) return false;
+        if (gState.st === 'ok' && !petOk(p)) return false;
+        if (gState.st === 'no' && petOk(p)) return false;
+        if (gState.st === 'chk' && !(p.chk || []).length) return false;
+        if (gState.lv === 'n' && p.mlv != null) return false;
+        if (lr && !(p.mlv != null && p.spots.some(function (s) { return s.c && s.lo >= lr[0] && s.lo <= lr[1]; }))) return false;
+        if (q && (p.n + ' ' + (p.gn || '') + ' ' + p.id + ' ' + p.spots.map(function (s) { return s.fn; }).join(' ')).toLowerCase().indexOf(q) < 0 && (p.alt || []).indexOf(+q) < 0) return false;
+        return true;
+      });
+      if (gState.sort === 'lv') l.sort(function (a, b) { return (a.mlv == null ? 999 : a.mlv) - (b.mlv == null ? 999 : b.mlv) || b.sc - a.sc; });
+      else if (gState.sort === 'sc') l.sort(function (a, b) { return b.sc - a.sc || a.id - b.id; });
+      else if (gState.sort === 'name') l.sort(function (a, b) { return a.n.localeCompare(b.n, 'ko'); });
+      else l.sort(function (a, b) { return a.id - b.id; });
+      return l;
+    }
+    function render() {
+      var l = list(); $('#gn').textContent = l.length + '종';
+      $('#gt').innerHTML = l.slice(0, gState.shown).map(function (p) {
+        return '<tr><td>' + icoPet(p.id) + ' <span class="id">' + p.id + '</span>' + (p.r.length ? ' <span class="tag ride">탑승</span>' : '') + '</td><td class="small">' + (elemHtml(p.el) || '무') + '</td><td>' + tierBadge(p.tier) + '</td><td>' + getTags(p) + '</td><td class="small">' + petGetWhere(p) +
+          ((p.chk || []).length ? '<div class="small warn">점검: ' + p.chk.map(esc).join(' / ') + '</div>' : '') + '</td></tr>';
+      }).join('');
+      $('#gm').hidden = l.length <= gState.shown;
+    }
+    $('#gq').addEventListener('input', function () { gState.q = this.value; gState.shown = 150; render(); });
+    [['#ge', 'el'], ['#gh', 'how'], ['#gs2', 'st'], ['#gl', 'lv'], ['#go', 'sort']].forEach(function (x) { $(x[0]).addEventListener('change', function () { gState[x[1]] = this.value; gState.shown = 150; render(); }); });
+    $('#gm').addEventListener('click', function () { gState.shown += 300; render(); });
+    autoMore('#gm'); render();
   }
 
   // ---------------------------------------------------------------- 마을 가는 법
@@ -1390,6 +1535,8 @@
     GUIDES.forEach(function (g) { IDX.push({ k: '가이드', t: g.title, s: g.region, h: '#/quests/' + g.no, x: (g.title + ' ' + g.region).toLowerCase() }); });
     (GD.cmds || []).forEach(function (c) { IDX.push({ k: '명령', t: c.cmd, s: c.desc, h: '#/start', x: (c.cmd + ' ' + c.desc).toLowerCase() }); });
     SETS.forEach(function (s) { IDX.push({ k: '세트', t: s.name, s: s.ids.length + '부위', h: '#/items?tab=sets', x: s.name.toLowerCase() }); });
+    (LV.bands || []).forEach(function (b) { IDX.push({ k: '레벨', t: 'Lv.' + b.a + '~' + b.b + ' 성장 가이드', s: b.t, h: '#/levels?b=' + b.a, x: ('lv' + b.a + ' 레벨 ' + b.a + '~' + b.b + ' ' + b.t + ' 성장 장비 사냥터').toLowerCase() }); });
+    IDX.push({ k: '가이드', t: '펫 구하기', s: '얻는 방법 전체', h: '#/petget', x: '펫 구하기 얻는 방법 포획 알 선물 교환' });
   }
   // 위쪽 검색 칸(모달 없음): 입력하면 칸 바로 밑에 결과 목록이 붙어 나온다. 페이지는 가리지 않고 그대로 둔다.
   var sel = 0, res = [], gsIn = $('#searchIn'), gsRes = $('#searchRes'), gsTop = document.querySelector('.top');
@@ -1451,7 +1598,7 @@
     try {
       if (r === 'home') pageHome(); else if (r === 'start') pageStart(); else if (r === 'hunts') pageHunts(params); else if (r === 'hunt') pageHunt(parts[1]);
       else if (r === 'quests' && parts[1]) pageQuest(decodeURIComponent(parts[1])); else if (r === 'quests') pageQuests(params); else if (r === 'pets') pagePets(params); else if (r === 'pet') pagePet(+parts[1]);
-      else if (r === 'items') pageItems(params); else if (r === 'item') pageItem(+parts[1]); else if (r === 'rides') pageRides(); else if (r === 'ride') pageRide(+parts[1]); else if (r === 'town') pageTown(+parts[1]); else if (r === 'course') { pageCourse(); if (params.s) { var se = document.getElementById('st' + params.s); if (se) setTimeout(function () { se.scrollIntoView(); }, 0); } } else if (r === 'updates') pageUpdates(); else pageHome();
+      else if (r === 'items') pageItems(params); else if (r === 'item') pageItem(+parts[1]); else if (r === 'rides') pageRides(); else if (r === 'ride') pageRide(+parts[1]); else if (r === 'town') pageTown(+parts[1]); else if (r === 'levels') pageLevels(params); else if (r === 'petget') pagePetGet(params); else if (r === 'course') { pageCourse(); if (params.s) { var se = document.getElementById('st' + params.s); if (se) setTimeout(function () { se.scrollIntoView(); }, 0); } } else if (r === 'updates') pageUpdates(); else pageHome();
     } catch (err) { app.innerHTML = '<p class="pad">화면을 그리다 오류: ' + esc(err && err.message) + '</p>'; if (window.console) console.error(err); }
     var key = location.hash;
     window.scrollTo(0, scrolls[key] || 0);

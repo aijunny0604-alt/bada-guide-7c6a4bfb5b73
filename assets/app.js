@@ -341,14 +341,40 @@
     return '서버 자료: 저장소 ' + (v.branch || '') + ' ' + (v.head || '') + (v.dirty ? ' (작업 중 변경 포함)' : '') +
       (v.pending && v.pending.length ? ' · ' + v.pending.join('·') + '차 준비분 포함(라이브 미적용)' : '') + ' · 라이브 ' + liveLabel();
   }
+  var POSTERS = ['대모험', '대모험', '대모험', '축제', '노을', '밤'], heroT = null, heroFirst = Math.floor(Math.random() * POSTERS.length);   // 들어올 때마다 아무 포스터나 먼저
+  function heroShow() {      // 포스터 천천히 넘기기(7초, 마우스 올리면·탭 숨기면 멈춤, 움직임 줄이기 설정이면 안 넘김)
+    clearInterval(heroT);
+    var box = $('.home-hero'); if (!box) return;
+    var sl = box.querySelectorAll('.hh-slide'), dots = box.querySelectorAll('.hh-dot'), cur = heroFirst, hold = false;
+    var nx0 = sl[(cur + 1) % sl.length].querySelector('img'); if (nx0) nx0.loading = 'eager';
+    function go(n) {
+      cur = (n + sl.length) % sl.length;
+      for (var i = 0; i < sl.length; i++) { sl[i].classList.toggle('on', i === cur); sl[i].setAttribute('aria-hidden', i === cur ? 'false' : 'true'); dots[i].classList.toggle('on', i === cur); }
+      var nx = sl[(cur + 1) % sl.length].querySelector('img'); if (nx) nx.loading = 'eager';   // 다음 장 미리
+    }
+    for (var i = 0; i < dots.length; i++) dots[i].onclick = function () { go(+this.getAttribute('data-i')); };
+    box.onmouseenter = function () { hold = true; }; box.onmouseleave = function () { hold = false; };
+    if (window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    heroT = setInterval(function () {
+      if (!document.body.contains(box)) { clearInterval(heroT); return; }
+      if (!hold && !document.hidden) go(cur + 1);
+    }, 7000);
+  }
   function pageHome() {
     var c = M.counts || {};
     var lv = store('lv') || '';
     var cards = [['#/start', '시작하기', '접속·명령어·포탈', (GD.cmds || []).length + '개 명령'], ['#/hunts', '사냥터·던전', '레벨대·경험치·몹·보스', c.hunts],
       ['#/quests', '퀘스트·NPC', '원작 이벤트·교환·8.0 NPC', c.quests], ['#/pets', '펫 도감', 'petmake 번호·속성·출현', c.pets],
       ['#/items', '아이템 도감', 'additem 번호·세트·얻는 곳', c.items], ['#/levels', '레벨별 성장 가이드', '사냥터·장비·퀘스트·펫', (LV.bands || []).length + '구간'], ['#/petget', '펫 구하기', '야생·퀘스트·교환·선물', P.filter(petOk).length + '종'], ['#/rides', '탑승', '몸 12종 탑승 그림', c.rides], ['#/updates', '업데이트 기록', 'CHANGELOG', c.changelog]];
-    var h = '<div class="banner"><h1>뿌이의 스톤에이지 <span class="muted small">공략 가이드</span></h1><div class="muted">' + esc(verText()) + '<br>그림: ' + esc((M.runtime || '').split('/').slice(-2).join('/')) +
-      ' · 이 페이지는 <code>python -I tools/make-guide-site.py</code>로 다시 만듭니다(서버 자료·문서에서 자동 생성).</div></div>';
+    var h = '<section class="home-hero" aria-roledescription="carousel" aria-label="뿌이의 스톤에이지 포스터"><div class="hh-stage">' + POSTERS.map(function (t, i) {
+      var b = 'assets/brand/poster-' + (i + 1) + '-', f = i === heroFirst;
+      return '<picture class="hh-slide' + (f ? ' on' : '') + '"' + (f ? '' : ' aria-hidden="true"') + '><source type="image/webp" srcset="' + b + '960.webp 960w, ' + b + '1672.webp 1672w" sizes="(max-width:1180px) 100vw, 1100px">' +
+        '<img src="' + b + '960.jpg" srcset="' + b + '960.jpg 960w, ' + b + '1672.jpg 1672w" sizes="(max-width:1180px) 100vw, 1100px" width="1672" height="941" alt="뿌이의 스톤에이지 — ' + esc(t) + ' 포스터"' +
+        (f ? ' fetchpriority="high"' : ' loading="lazy" decoding="async"') + '></picture>';
+    }).join('') + '<div class="hh-dots" role="tablist">' + POSTERS.map(function (t, i) { return '<button type="button" class="hh-dot' + (i === heroFirst ? ' on' : '') + '" data-i="' + i + '" aria-label="' + (i + 1) + '번 포스터 · ' + esc(t) + '"></button>'; }).join('') + '</div></div>' +
+      '<div class="hh-cap"><b>공략 가이드</b><span>레벨별 성장 · 퀘스트 · 사냥터 · 펫 · 아이템 · 탑승</span><em>' + esc(verText()) + '</em></div></section>';
+    h += '<p class="muted small hh-note">그림: ' + esc((M.runtime || '').split('/').slice(-2).join('/')) +
+      ' · 이 페이지는 <code>python -I tools/make-guide-site.py</code>로 다시 만듭니다(서버 자료·문서에서 자동 생성).</p>';
     h += '<div class="grid home-cards">' + cards.map(function (x) { return '<div class="card home-card" data-go="' + x[0] + '"><div>' + x[1] + '</div><b>' + esc(x[3] == null ? '' : x[3]) + '</b><div class="muted small">' + x[2] + '</div></div>'; }).join('') + '</div>';
     h += '<h2>내 레벨에 맞는 사냥터</h2><div class="toolbar"><label>캐릭터 Lv <input type="number" id="myLv" min="1" max="300" value="' + esc(lv) + '"></label><span class="muted small">몹 레벨이 내 레벨 −15 ~ +5 인 곳 중 레벨업이 빠른 순</span></div><div id="recHunts"></div>';
     h += '<h2>자주 쓰는 명령</h2><div class="chips">' + ['[오토]', '[자동사냥 1]', '[일괄 1]', '[따라와]', '[귀환]', '[메뉴]', '[가방 2]', '[펫창 2]', '[gm warp 1000 50 115]', '[gm 펫탑승 1]', '[gm help all]']
@@ -362,6 +388,7 @@
       return '<div class="card" data-go="#/updates"><div class="muted small">' + esc(e.date) + '</div><b>' + esc(e.title) + '</b><div class="small muted">' + esc(e.body.replace(/[`*#|]/g, '').slice(0, 140)) + '…</div></div>';
     }).join('') + '</div></div>';
     app.innerHTML = h;
+    heroShow();
     var inp = $('#myLv');
     function rec() {
       var v = +inp.value; store('lv', inp.value);

@@ -1,0 +1,36 @@
+/* 서버 상태 알림(15.2) — 돌판·나무 느낌(스톤에이지 풍). status.js 와 짝. */
+:root{--srv-wood1:#8a5a2b;--srv-wood2:#5e3a17;--srv-rim:#e0b35a;--srv-ink:#fff6e0;--srv-on:#3ddc6a;--srv-off:#e5484d;--srv-wait:#c9b27c;
+  --srv-stone1:#efe6d2;--srv-stone2:#d9cbae;--srv-stone-ink:#3b2a14;--srv-stone-line:#b79c6b}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--srv-stone1:#3a3226;--srv-stone2:#2a241b;--srv-stone-ink:#f5e9cf;--srv-stone-line:#6b5a3c}}
+:root[data-theme="dark"]{--srv-stone1:#3a3226;--srv-stone2:#2a241b;--srv-stone-ink:#f5e9cf;--srv-stone-line:#6b5a3c}
+
+.srv-pill{display:inline-flex;align-items:center;gap:6px;height:30px;padding:0 12px 0 10px;border-radius:999px;white-space:nowrap;text-decoration:none;
+  background:linear-gradient(180deg,var(--srv-wood1),var(--srv-wood2));color:var(--srv-ink);border:2px solid var(--srv-rim);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.25),0 1px 2px rgba(0,0,0,.25);font-size:13px;font-weight:700;text-shadow:0 1px 0 rgba(0,0,0,.45);margin-left:auto}
+.srv-pill+.ver{margin-left:0}
+.srv-pill:hover{filter:brightness(1.08)}
+.srv-dot{display:inline-block;width:10px;height:10px;border-radius:50%;background:var(--srv-wait);box-shadow:0 0 0 2px rgba(0,0,0,.25)}
+.srv-open .srv-dot{background:var(--srv-on);box-shadow:0 0 0 2px rgba(0,0,0,.25),0 0 8px var(--srv-on);animation:srvPulse 2.4s ease-in-out infinite}
+.srv-closed .srv-dot,.srv-stale .srv-dot{background:var(--srv-off)}
+.srv-stale .srv-t{opacity:.9}
+@keyframes srvPulse{50%{box-shadow:0 0 0 2px rgba(0,0,0,.25),0 0 2px var(--srv-on)}}
+@media (prefers-reduced-motion:reduce){.srv-open .srv-dot{animation:none}}
+
+.srv-card{display:flex;align-items:center;gap:14px;margin:0 0 16px;padding:14px 18px;border-radius:14px;color:var(--srv-stone-ink);
+  background:radial-gradient(120% 140% at 0% 0%,var(--srv-stone1),var(--srv-stone2));border:2px solid var(--srv-stone-line);
+  box-shadow:inset 0 2px 0 rgba(255,255,255,.35),inset 0 -3px 0 rgba(0,0,0,.12),0 2px 6px rgba(0,0,0,.12)}
+.srv-stone{flex:none;display:grid;place-items:center;width:46px;height:46px;border-radius:50%;
+  background:linear-gradient(180deg,var(--srv-wood1),var(--srv-wood2));border:3px solid var(--srv-rim);box-shadow:0 2px 4px rgba(0,0,0,.3)}
+.srv-stone .srv-dot{width:18px;height:18px}
+.srv-head{font-size:18px;font-weight:800;letter-spacing:-.2px}
+.srv-sub{font-size:13.5px;opacity:.85}
+.srv-when{opacity:.75}
+
+@media (max-width:900px){
+  .srv-pill{height:28px;padding:0 10px 0 8px;font-size:12px}
+  .srv-pill .srv-t{display:none}
+  .srv-pill.srv-open .srv-sep{display:none}
+  .srv-pill:not(.srv-open) .srv-t{display:inline}
+}
+@media (max-width:420px){.srv-pill:not(.srv-open) .srv-t{display:none}.srv-pill{padding:0 8px}}
+.top.searching .srv-pill{display:none}

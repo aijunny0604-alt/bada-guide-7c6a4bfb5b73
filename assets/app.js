@@ -443,38 +443,61 @@
     lb.querySelector('.po-x').focus();
     window.addEventListener('hashchange', close, { once: true });
   }
+  function homeTile(href, ico, title, num, desc) {
+    return '<a class="ht" href="' + href + '"><span class="ht-ico" aria-hidden="true">' + ico + '</span><span class="ht-txt"><span class="ht-t">' + esc(title) + '</span>' +
+      (num != null && num !== '' ? '<b class="ht-n">' + esc(num) + '</b>' : '') + '<span class="ht-d">' + esc(desc) + '</span></span></a>';
+  }
+  function homeSec(id, title, sub, body, more) {
+    return '<section class="hs" id="' + id + '"><div class="hs-h"><h2>' + title + '</h2>' + (sub ? '<span class="hs-sub">' + sub + '</span>' : '') + (more || '') + '</div>' + body + '</section>';
+  }
   function pageHome() {
     var c = M.counts || {};
     var lv = store('lv') || '';
-    var cards = [['#/start', '시작하기', '접속·명령어·포탈', (GD.cmds || []).length + '개 명령'], ['#/hunts', '사냥터·던전', '레벨대·경험치·몹·보스', c.hunts],
-      ['#/quests', '퀘스트·NPC', '원작 이벤트·교환·8.0 NPC', c.quests], ['#/pets', '펫 도감', 'petmake 번호·속성·출현', c.pets],
-      ['#/items', '아이템 도감', 'additem 번호·세트·얻는 곳', c.items], ['#/levels', '레벨별 성장 가이드', '사냥터·장비·퀘스트·펫', (LV.bands || []).length + '구간'], ['#/petget', '펫 구하기', '야생·퀘스트·교환·선물', P.filter(petOk).length + '종'], ['#/rides', '탑승', '몸 12종 탑승 그림', c.rides], ['#/updates', '업데이트 기록', 'CHANGELOG', c.changelog]];
     var h = heroHtml();
-    h += '<p class="muted small hh-note">그림: ' + esc((M.runtime || '').split('/').slice(-2).join('/')) +
-      ' · 이 페이지는 <code>python -I tools/make-guide-site.py</code>로 다시 만듭니다(서버 자료·문서에서 자동 생성).</p>';
-    h += '<div class="grid home-cards">' + cards.map(function (x) { return '<div class="card home-card" data-go="' + x[0] + '"><div>' + x[1] + '</div><b>' + esc(x[3] == null ? '' : x[3]) + '</b><div class="muted small">' + x[2] + '</div></div>'; }).join('') + '</div>';
-    h += '<h2>내 레벨에 맞는 사냥터</h2><div class="toolbar"><label>캐릭터 Lv <input type="number" id="myLv" min="1" max="300" value="' + esc(lv) + '"></label><span class="muted small">몹 레벨이 내 레벨 −15 ~ +5 인 곳 중 레벨업이 빠른 순</span></div><div id="recHunts"></div>';
-    h += '<h2>자주 쓰는 명령</h2><div class="chips">' + ['[오토]', '[자동사냥 1]', '[일괄 1]', '[따라와]', '[귀환]', '[메뉴]', '[가방 2]', '[펫창 2]', '[gm warp 1000 50 115]', '[gm 펫탑승 1]', '[gm help all]']
-      .map(function (t) { return copyBtn(t); }).join(' ') + '</div>';
-    h += '<div class="home-sec"><h2>처음이라면 여기부터</h2>' + stageHtml(0, true) + '</div>';
-    h += '<div class="home-sec"><h2>퀘스트 분류별 바로 가기</h2><div class="grid home-cards">' + QCATS.map(function (c) {
-      var n = allQuests().filter(function (q) { return q.cat === c; }).length;
-      return '<div class="card home-card" data-go="#/quests?cat=' + encodeURIComponent(c) + '"><div>' + esc(c) + '</div><b>' + n + '</b><div class="muted small">' + ({ '필수': '성장에 꼭 필요', '주요 이벤트': '희귀 펫·장비 보상', '서브': '그 밖의 부탁·수집', '커스텀': '바다 서버 전용', '8.0 NPC': '봉인해제 NPC' })[c] + '</div></div>';
-    }).join('') + '<div class="card home-card" data-go="#/course"><div>코스 공략</div><b>' + STAGES.length + '단계</b><div class="muted small">Lv.1 → 300 성장 루트</div></div></div></div>';
-    h += '<div class="home-sec"><h2>최근 업데이트</h2><div class="grid" style="grid-template-columns:repeat(auto-fill,minmax(300px,1fr))">' + LOG.slice(0, 3).map(function (e) {
-      return '<div class="card" data-go="#/updates"><div class="muted small">' + esc(e.date) + '</div><b>' + esc(e.title) + '</b><div class="small muted">' + esc(e.body.replace(/[`*#|]/g, '').slice(0, 140)) + '…</div></div>';
-    }).join('') + '</div></div>';
+    // 빌드 정보는 공개 화면에 안 보이게 주석으로만
+    h += '<!-- 그림: ' + esc((M.runtime || '').split('/').slice(-2).join('/')) + ' · python -I tools/make-guide-site.py 로 다시 만듦(서버 자료·문서에서 자동 생성) -->';
+    h += '<div class="home-body">';
+    h += '<nav class="ht-grid" aria-label="바로 가기">' + [
+      homeTile('#/start', '🧭', '시작하기', (GD.cmds || []).length + '개 명령', '접속·명령어·포탈'),
+      homeTile('#/levels', '📈', '레벨별 성장', (LV.bands || []).length + '구간', '사냥터·장비·퀘스트·펫'),
+      homeTile('#/hunts', '⚔️', '사냥터·던전', c.hunts, '레벨대·경험치·몹·보스'),
+      homeTile('#/quests', '📜', '퀘스트·NPC', c.quests, '원작 이벤트·교환·8.0 NPC'),
+      homeTile('#/pets', '🐾', '펫 도감', c.pets, '번호·속성·출현'),
+      homeTile('#/petget', '🥚', '펫 구하기', P.filter(petOk).length + '종', '야생·퀘스트·교환·선물'),
+      homeTile('#/items', '🎒', '아이템 도감', c.items, '번호·세트·얻는 곳'),
+      homeTile('#/rides', '🦖', '탑승', c.rides, '몸 12종 탑승 그림')].join('') + '</nav>';
+    h += homeSec('hsLv', '내 레벨에 맞는 사냥터', '몹 레벨이 내 레벨 −15 ~ +5 인 곳 중 레벨업이 빠른 순',
+      '<div class="lv-card"><label class="lv-in"><span>캐릭터 Lv</span><input type="number" id="myLv" min="1" max="300" inputmode="numeric" value="' + esc(lv) + '" placeholder="35"></label>' +
+      '<div class="lv-quick">' + [10, 30, 60, 100, 150, 200].map(function (v) { return '<button type="button" class="chip" data-lv="' + v + '">Lv.' + v + '</button>'; }).join('') + '</div></div><div id="recHunts"></div>');
+    var cm = (GD.cmds || []).filter(function (x) { return x.ok !== false; }).slice(0, 8);
+    h += homeSec('hsCmd', '자주 쓰는 명령', '채팅 창에 그대로 입력 · 눌러서 복사',
+      '<div class="cmd-grid">' + cm.map(function (x) { return '<div class="cmd">' + copyBtn(x.ex) + '<span>' + esc(x.desc) + '</span></div>'; }).join('') + '</div>' +
+      '<div class="cmd-gm"><span class="muted small">GM</span>' + ['[gm warp 1000 50 115]', '[gm 펫탑승 1]', '[gm help all]', '[메뉴]'].map(function (t) { return copyBtn(t); }).join('') + '</div>',
+      '<a class="hs-more" href="#/start">명령 전체 ›</a>');
+    h += homeSec('hsStage', '처음이라면 여기부터', '1단계 · Lv.' + STAGES[0][0] + '~' + STAGES[0][1] + ' 추천 사냥터와 퀘스트', stageHtml(0, true), '<a class="hs-more" href="#/course">코스 공략 전체 ›</a>');
+    h += homeSec('hsQ', '퀘스트 분류별 바로 가기', '', '<div class="ht-grid ht-3">' + QCATS.map(function (q) {
+      var n = allQuests().filter(function (x) { return x.cat === q; }).length;
+      return homeTile('#/quests?cat=' + encodeURIComponent(q), ({ '필수': '⭐', '주요 이벤트': '🏆', '서브': '📦', '커스텀': '🛠️', '8.0 NPC': '🗝️' })[q] || '📜', q, n,
+        ({ '필수': '성장에 꼭 필요', '주요 이벤트': '희귀 펫·장비 보상', '서브': '그 밖의 부탁·수집', '커스텀': '바다 서버 전용', '8.0 NPC': '봉인해제 NPC' })[q] || '');
+    }).join('') + homeTile('#/course', '🗺️', '코스 공략', STAGES.length + '단계', 'Lv.1 → 300 성장 루트') + '</div>');
+    h += homeSec('hsUp', '최근 업데이트', '', '<div class="up-list">' + LOG.slice(0, 3).map(function (e) {
+      return '<a class="up" href="#/updates"><span class="up-d">' + esc(e.date) + '</span><b>' + esc(e.title) + '</b><span class="up-b">' + esc(e.body.replace(/[`*#|>-]/g, ' ').replace(/\s+/g, ' ').slice(0, 120)) + '…</span></a>';
+    }).join('') + '</div>', '<a class="hs-more" href="#/updates">업데이트 기록 ' + (c.changelog || LOG.length) + '개 ›</a>');
+    h += '</div>';
     app.innerHTML = h;
     heroShow();
     var inp = $('#myLv');
     function rec() {
       var v = +inp.value; store('lv', inp.value);
-      if (!v) { $('#recHunts').innerHTML = '<p class="muted">레벨을 넣으면 추천이 나옵니다.</p>'; return; }
+      [].forEach.call(app.querySelectorAll('.lv-quick .chip'), function (b) { b.classList.toggle('on', +b.getAttribute('data-lv') === v); });
+      if (!v) { $('#recHunts').innerHTML = '<p class="muted lv-empty">레벨을 넣거나 위 단추를 누르면 추천 사냥터가 나옵니다.</p>'; return; }
       var list = H.hunts.filter(function (x) { var mid = (x.lo + x.hi) / 2; return mid >= v - 15 && mid <= v + 5 && x.battles; })
-        .sort(function (a, b) { return a.battles - b.battles; }).slice(0, 8);
-      $('#recHunts').innerHTML = list.length ? huntTable(list) : '<p class="muted">맞는 사냥터가 없습니다.</p>';
+        .sort(function (a, b) { return a.battles - b.battles; }).slice(0, 6);
+      $('#recHunts').innerHTML = list.length ? '<div class="grid qcards">' + list.map(huntCard).join('') + '</div>' : '<p class="muted lv-empty">맞는 사냥터가 없습니다.</p>';
     }
-    inp.addEventListener('input', rec); rec();
+    inp.addEventListener('input', rec);
+    [].forEach.call(app.querySelectorAll('.lv-quick .chip'), function (b) { b.onclick = function () { inp.value = b.getAttribute('data-lv'); rec(); }; });
+    rec();
   }
 
   // ---------------------------------------------------------------- 시작하기

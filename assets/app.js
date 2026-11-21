@@ -341,24 +341,107 @@
     return '서버 자료: 저장소 ' + (v.branch || '') + ' ' + (v.head || '') + (v.dirty ? ' (작업 중 변경 포함)' : '') +
       (v.pending && v.pending.length ? ' · ' + v.pending.join('·') + '차 준비분 포함(라이브 미적용)' : '') + ' · 라이브 ' + liveLabel();
   }
-  var POSTERS = ['대모험', '대모험', '대모험', '축제', '노을', '밤'], heroT = null, heroFirst = Math.floor(Math.random() * POSTERS.length);   // 들어올 때마다 아무 포스터나 먼저
-  function heroShow() {      // 포스터 천천히 넘기기(7초, 마우스 올리면·탭 숨기면 멈춤, 움직임 줄이기 설정이면 안 넘김)
+  // ---------------------------------------------------------------- 포스터(대문 슬라이드·갤러리) — data/posters.js(posters.json 에서)
+  var PO = SA.posters || [], heroT = null, SEASON_KO = { spring: '봄', summer: '여름', autumn: '가을', winter: '겨울' };
+  function nowSeason() { var m = new Date().getMonth() + 1; return m >= 3 && m <= 5 ? 'spring' : m <= 8 && m >= 6 ? 'summer' : m >= 9 && m <= 11 ? 'autumn' : 'winter'; }
+  function shuffle(a) { for (var i = a.length - 1; i > 0; i--) { var j = Math.floor(Math.random() * (i + 1)), t = a[i]; a[i] = a[j]; a[j] = t; } return a; }
+  // 들어올 때마다: 이번 계절 포스터(섞어서) → 나머지(섞어서)
+  var HERO_ORDER = (function () { var s = nowSeason(); return shuffle(PO.filter(function (p) { return p.season === s; })).concat(shuffle(PO.filter(function (p) { return p.season !== s; }))); })();
+  function posterSrc(p) { var b = 'assets/brand/poster-' + p.id + '-'; return { webp: b + '960.webp 960w, ' + b + '1920.webp 1920w', jpg: b + '960.jpg', thumb: b + '480.webp', big: b + '1920.webp' }; }
+  // 화면이 16:9 보다 납작해 잘릴 때 포스터 안 로고가 살게 초점(posters.json logo)
+  var PO_FOCUS = { bottom: '50% 78%', top: '50% 18%', 'top-left': '25% 15%', none: '50% 45%' };
+  function posterTag(p) { return p.season ? '<span class="po-season po-' + p.season + '">' + SEASON_KO[p.season] + '</span>' : ''; }
+  function heroLoad(sl) {      // 보이기 직전에만 그림 주소를 넣는다(16장 한꺼번에 받지 않게)
+    if (!sl || sl.getAttribute('data-ok')) return;
+    sl.setAttribute('data-ok', '1');
+    var so = sl.querySelector('source'), im = sl.querySelector('img');
+    so.srcset = so.getAttribute('data-srcset'); im.src = im.getAttribute('data-src');
+  }
+  function heroShow() {      // 자동 넘기기 6.5초(서서히 겹쳐 바뀜 + 천천히 확대). 탭이 숨겨졌을 때만 멈춤. 움직임 줄이기면 확대만 뺌
     clearInterval(heroT);
-    var box = $('.home-hero'); if (!box) return;
-    var sl = box.querySelectorAll('.hh-slide'), dots = box.querySelectorAll('.hh-dot'), cur = heroFirst, hold = false;
-    var nx0 = sl[(cur + 1) % sl.length].querySelector('img'); if (nx0) nx0.loading = 'eager';
+    var box = $('.home-hero'); if (!box || !HERO_ORDER.length) return;
+    var sl = box.querySelectorAll('.hh-slide'), dots = box.querySelectorAll('.hh-dot'), ttl = box.querySelector('.hh-title'), cur = -1, x0 = null;
     function go(n) {
-      cur = (n + sl.length) % sl.length;
+      var nx = (n + sl.length) % sl.length;
+      if (nx === cur) return;
+      cur = nx;
+      heroLoad(sl[cur]);
       for (var i = 0; i < sl.length; i++) { sl[i].classList.toggle('on', i === cur); sl[i].setAttribute('aria-hidden', i === cur ? 'false' : 'true'); dots[i].classList.toggle('on', i === cur); }
-      var nx = sl[(cur + 1) % sl.length].querySelector('img'); if (nx) nx.loading = 'eager';   // 다음 장 미리
+      var p = HERO_ORDER[cur];
+      box.setAttribute('data-cur', p.id);
+      if (ttl) { ttl.innerHTML = posterTag(p) + esc(p.t); ttl.href = '#/gallery?p=' + p.id; ttl.classList.toggle('at-r', /^top/.test(p.logo || '')); }   // 로고가 위에 있으면 제목은 오른쪽 위
+      setTimeout(function () { heroLoad(sl[(cur + 1) % sl.length]); }, 1200);   // 다음 장 미리
     }
-    for (var i = 0; i < dots.length; i++) dots[i].onclick = function () { go(+this.getAttribute('data-i')); };
-    box.onmouseenter = function () { hold = true; }; box.onmouseleave = function () { hold = false; };
-    if (window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-    heroT = setInterval(function () {
-      if (!document.body.contains(box)) { clearInterval(heroT); return; }
-      if (!hold && !document.hidden) go(cur + 1);
-    }, 7000);
+    function restart() {
+      clearInterval(heroT);
+      heroT = setInterval(function () {
+        if (!document.body.contains(box)) { clearInterval(heroT); return; }
+        if (!document.hidden) go(cur + 1);
+      }, 6500);
+    }
+    function step(d) { go(cur + d); restart(); }
+    for (var i = 0; i < dots.length; i++) dots[i].onclick = function () { go(+this.getAttribute('data-i')); restart(); };
+    box.querySelector('.hh-prev').onclick = function () { step(-1); };
+    box.querySelector('.hh-next').onclick = function () { step(1); };
+    var st = box.querySelector('.hh-stage');
+    st.addEventListener('touchstart', function (e) { x0 = e.touches[0].clientX; }, { passive: true });
+    st.addEventListener('touchend', function (e) { if (x0 == null) return; var d = e.changedTouches[0].clientX - x0; if (Math.abs(d) > 40) step(d < 0 ? 1 : -1); x0 = null; });
+    go(0);
+    restart();
+  }
+  function heroHtml() {
+    if (!HERO_ORDER.length) return '';
+    return '<section class="home-hero" aria-roledescription="carousel" aria-label="뿌이의 스톤에이지 포스터"><div class="hh-stage">' + HERO_ORDER.map(function (p, i) {
+      var s = posterSrc(p);
+      return '<picture class="hh-slide' + (i ? '' : ' on') + '"><source type="image/webp" data-srcset="' + s.webp + '" sizes="(max-width:860px) 100vw, calc(100vw - 256px)">' +
+        '<img data-src="' + s.jpg + '" width="1920" height="' + (p.h || 1080) + '" style="object-position:' + (PO_FOCUS[p.logo] || '50% 50%') + '" alt="뿌이의 스톤에이지 포스터 — ' + esc(p.t) + '"' + (i ? ' decoding="async"' : ' fetchpriority="high"') + '></picture>';
+    }).join('') + '<a class="hh-title" href="#/gallery"></a>' +
+      '<button type="button" class="hh-arrow hh-prev" aria-label="이전 포스터">‹</button><button type="button" class="hh-arrow hh-next" aria-label="다음 포스터">›</button>' +
+      '<div class="hh-dots" role="tablist">' + HERO_ORDER.map(function (p, i) { return '<button type="button" class="hh-dot' + (i ? '' : ' on') + '" data-i="' + i + '" aria-label="' + (i + 1) + '번 포스터 · ' + esc(p.t) + '"></button>'; }).join('') + '</div></div>' +
+      '<div class="hh-cap"><b>공략 가이드</b><span>레벨별 성장 · 퀘스트 · 사냥터 · 펫 · 아이템 · 탑승</span><a class="hh-gal" href="#/gallery">포스터 ' + PO.length + '장 모아 보기 ›</a><em>' + esc(verText()) + '</em></div></section>';
+  }
+  function pageGallery(params) {
+    document.title = '포스터 갤러리 · 뿌이의 스톤에이지';
+    var sel = (params && params.season) || '', list = PO.filter(function (p) { return !sel || (sel === 'all4' ? !p.season : p.season === sel); });
+    var h = '<h1>포스터 갤러리 <span class="muted small">공식 포스터 ' + PO.length + '장 · 눌러서 크게 보기</span></h1><div class="chips">' +
+      [['', '전체'], ['spring', '봄'], ['summer', '여름'], ['autumn', '가을'], ['winter', '겨울'], ['all4', '사계절']].map(function (c) {
+        var n = c[0] ? PO.filter(function (p) { return c[0] === 'all4' ? !p.season : p.season === c[0]; }).length : PO.length;
+        return n ? '<a class="chip' + (c[0] === sel ? ' on' : '') + '" href="#/gallery' + (c[0] ? '?season=' + c[0] : '') + '">' + c[1] + ' ' + n + '</a>' : '';
+      }).join('') + '</div><div class="po-grid">' + list.map(function (p) {
+        var s = posterSrc(p);
+        return '<button type="button" class="po-card" data-po="' + p.id + '"><span class="po-pic"><img src="' + s.thumb + '" width="480" height="' + Math.round((p.h || 941) * 480 / 1672) + '" loading="lazy" decoding="async" alt="' + esc(p.t) + '"></span>' +
+          '<span class="po-t">' + posterTag(p) + esc(p.t) + '</span></button>';
+      }).join('') + '</div>';
+    app.innerHTML = h;
+    [].forEach.call(app.querySelectorAll('.po-card'), function (b) { b.onclick = function () { lightbox(list, +b.getAttribute('data-po')); }; });
+    if (params && params.p) { var q = PO.filter(function (x) { return x.id === +params.p; })[0]; if (q) lightbox(PO, q.id); }
+  }
+  function lightbox(list, id) {     // 크게 보기: ←/→·Esc, 쓸어 넘기기, 바깥 누르면 닫기
+    var old = document.getElementById('poLb'); if (old) old.remove();
+    var i = Math.max(0, list.map(function (p) { return p.id; }).indexOf(id));
+    var lb = document.createElement('div'); lb.id = 'poLb'; lb.className = 'po-lb'; lb.setAttribute('role', 'dialog'); lb.setAttribute('aria-modal', 'true');
+    lb.innerHTML = '<button type="button" class="po-x" aria-label="닫기">✕</button><button type="button" class="po-nav po-prev" aria-label="이전">‹</button>' +
+      '<figure><img alt=""><figcaption></figcaption></figure><button type="button" class="po-nav po-next" aria-label="다음">›</button>';
+    document.body.appendChild(lb);
+    var img = lb.querySelector('img'), cap = lb.querySelector('figcaption'), x0 = null;
+    function show(n) {
+      i = (n + list.length) % list.length; var p = list[i];
+      img.src = posterSrc(p).big; img.alt = p.t;
+      cap.innerHTML = posterTag(p) + '<b>' + esc(p.t) + '</b><span>' + (i + 1) + ' / ' + list.length + '</span>';
+      var nx = new Image(); nx.src = posterSrc(list[(i + 1) % list.length]).big;
+    }
+    function close() { lb.remove(); document.removeEventListener('keydown', key); document.body.style.overflow = ''; }
+    function key(e) { if (e.key === 'Escape') close(); else if (e.key === 'ArrowLeft') show(i - 1); else if (e.key === 'ArrowRight') show(i + 1); }
+    lb.onclick = function (e) { if (e.target === lb || e.target.classList.contains('po-x')) close(); };
+    lb.querySelector('.po-prev').onclick = function () { show(i - 1); };
+    lb.querySelector('.po-next').onclick = function () { show(i + 1); };
+    lb.addEventListener('touchstart', function (e) { x0 = e.touches[0].clientX; }, { passive: true });
+    lb.addEventListener('touchend', function (e) { if (x0 == null) return; var d = e.changedTouches[0].clientX - x0; if (Math.abs(d) > 50) show(i + (d < 0 ? 1 : -1)); x0 = null; });
+    document.addEventListener('keydown', key);
+    document.body.style.overflow = 'hidden';
+    show(i);
+    lb.querySelector('.po-x').focus();
+    window.addEventListener('hashchange', close, { once: true });
   }
   function pageHome() {
     var c = M.counts || {};
@@ -366,13 +449,7 @@
     var cards = [['#/start', '시작하기', '접속·명령어·포탈', (GD.cmds || []).length + '개 명령'], ['#/hunts', '사냥터·던전', '레벨대·경험치·몹·보스', c.hunts],
       ['#/quests', '퀘스트·NPC', '원작 이벤트·교환·8.0 NPC', c.quests], ['#/pets', '펫 도감', 'petmake 번호·속성·출현', c.pets],
       ['#/items', '아이템 도감', 'additem 번호·세트·얻는 곳', c.items], ['#/levels', '레벨별 성장 가이드', '사냥터·장비·퀘스트·펫', (LV.bands || []).length + '구간'], ['#/petget', '펫 구하기', '야생·퀘스트·교환·선물', P.filter(petOk).length + '종'], ['#/rides', '탑승', '몸 12종 탑승 그림', c.rides], ['#/updates', '업데이트 기록', 'CHANGELOG', c.changelog]];
-    var h = '<section class="home-hero" aria-roledescription="carousel" aria-label="뿌이의 스톤에이지 포스터"><div class="hh-stage">' + POSTERS.map(function (t, i) {
-      var b = 'assets/brand/poster-' + (i + 1) + '-', f = i === heroFirst;
-      return '<picture class="hh-slide' + (f ? ' on' : '') + '"' + (f ? '' : ' aria-hidden="true"') + '><source type="image/webp" srcset="' + b + '960.webp 960w, ' + b + '1672.webp 1672w" sizes="(max-width:1180px) 100vw, 1100px">' +
-        '<img src="' + b + '960.jpg" srcset="' + b + '960.jpg 960w, ' + b + '1672.jpg 1672w" sizes="(max-width:1180px) 100vw, 1100px" width="1672" height="941" alt="뿌이의 스톤에이지 — ' + esc(t) + ' 포스터"' +
-        (f ? ' fetchpriority="high"' : ' loading="lazy" decoding="async"') + '></picture>';
-    }).join('') + '<div class="hh-dots" role="tablist">' + POSTERS.map(function (t, i) { return '<button type="button" class="hh-dot' + (i === heroFirst ? ' on' : '') + '" data-i="' + i + '" aria-label="' + (i + 1) + '번 포스터 · ' + esc(t) + '"></button>'; }).join('') + '</div></div>' +
-      '<div class="hh-cap"><b>공략 가이드</b><span>레벨별 성장 · 퀘스트 · 사냥터 · 펫 · 아이템 · 탑승</span><em>' + esc(verText()) + '</em></div></section>';
+    var h = heroHtml();
     h += '<p class="muted small hh-note">그림: ' + esc((M.runtime || '').split('/').slice(-2).join('/')) +
       ' · 이 페이지는 <code>python -I tools/make-guide-site.py</code>로 다시 만듭니다(서버 자료·문서에서 자동 생성).</p>';
     h += '<div class="grid home-cards">' + cards.map(function (x) { return '<div class="card home-card" data-go="' + x[0] + '"><div>' + x[1] + '</div><b>' + esc(x[3] == null ? '' : x[3]) + '</b><div class="muted small">' + x[2] + '</div></div>'; }).join('') + '</div>';
@@ -1625,7 +1702,7 @@
     try {
       if (r === 'home') pageHome(); else if (r === 'start') pageStart(); else if (r === 'hunts') pageHunts(params); else if (r === 'hunt') pageHunt(parts[1]);
       else if (r === 'quests' && parts[1]) pageQuest(decodeURIComponent(parts[1])); else if (r === 'quests') pageQuests(params); else if (r === 'pets') pagePets(params); else if (r === 'pet') pagePet(+parts[1]);
-      else if (r === 'items') pageItems(params); else if (r === 'item') pageItem(+parts[1]); else if (r === 'rides') pageRides(); else if (r === 'ride') pageRide(+parts[1]); else if (r === 'town') pageTown(+parts[1]); else if (r === 'levels') pageLevels(params); else if (r === 'petget') pagePetGet(params); else if (r === 'course') { pageCourse(); if (params.s) { var se = document.getElementById('st' + params.s); if (se) setTimeout(function () { se.scrollIntoView(); }, 0); } } else if (r === 'updates') pageUpdates(); else pageHome();
+      else if (r === 'items') pageItems(params); else if (r === 'item') pageItem(+parts[1]); else if (r === 'rides') pageRides(); else if (r === 'ride') pageRide(+parts[1]); else if (r === 'town') pageTown(+parts[1]); else if (r === 'levels') pageLevels(params); else if (r === 'petget') pagePetGet(params); else if (r === 'course') { pageCourse(); if (params.s) { var se = document.getElementById('st' + params.s); if (se) setTimeout(function () { se.scrollIntoView(); }, 0); } } else if (r === 'updates') pageUpdates(); else if (r === 'gallery') pageGallery(params); else pageHome();
     } catch (err) { app.innerHTML = '<p class="pad">화면을 그리다 오류: ' + esc(err && err.message) + '</p>'; if (window.console) console.error(err); }
     var key = location.hash;
     window.scrollTo(0, scrolls[key] || 0);
